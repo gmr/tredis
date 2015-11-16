@@ -15,9 +15,9 @@ class BaseTestCase(testing.AsyncTestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.client = tredis.RedisClient(os.getenv('REDIS_HOST'),
-                                         os.getenv('REDIS_PORT'),
-                                         os.getenv('REDIS_DB'))
+        self.client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
+                                         int(os.getenv('REDIS_PORT', '6379')),
+                                         int(os.getenv('REDIS_DB', '0')))
         self._execute_result = None
 
     def _execute(self, parts, callback):
@@ -39,8 +39,8 @@ class ConnectTests(testing.AsyncTestCase):
 
     @testing.gen_test
     def test_bad_db_raises_exception(self):
-        client = tredis.RedisClient(os.getenv('REDIS_HOST'),
-                                    os.getenv('REDIS_PORT'),
+        client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
+                                    int(os.getenv('REDIS_PORT', '6379')),
                                     db=255)
         with self.assertRaises(tredis.RedisError):
             yield client.connect()
