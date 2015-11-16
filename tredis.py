@@ -5,8 +5,10 @@ An simple asynchronous Redis client for Tornado
 
 """
 import logging
+import socket
 
 from tornado import gen
+from tornado import ioloop
 from tornado import tcpclient
 
 __version__ = '0.1.0'
@@ -50,14 +52,33 @@ class RedisClient(object):
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, db=DEFAULT_DB):
         self._settings = host, port, int(db or 0)
         self._client = tcpclient.TCPClient()
+        self._ioloop = ioloop.IOLoop.current()
         self._stream = None
 
     @gen.coroutine
     def connect(self):
-        self._stream = yield self._client.connect(self._settings[0],
-                                                  self._settings[1])
+        """Connect to the Redis server, selecting the specified database.
+
+        :raises: :py:class:`ConnectError <tredis.ConnectError>`
+                 :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        err = None
+        try:
+            self._stream = yield self._client.connect(self._settings[0],
+                                                      self._settings[1])
+        except socket.error as error:
+            err = error
+        finally:
+            if err:
+                raise ConnectError(err)
+
         if self._settings[2]:
             yield self.select(self._settings[2])
+
+    def close(self):
+        """Close the connection to the Redis Server"""
+        self._stream.close()
 
     # Server Commands
 
@@ -76,14 +97,14 @@ class RedisClient(object):
 
         :param str|bytes password: The password to authenticate with
         :rtype: bool
-        :raises: :py:class:`AuthenticationError <tredis.AuthenticationError>`
+        :raises: :py:class:`AuthError <tredis.AuthError>`
                  :py:class:`RedisError <tredis.RedisError>`
 
         """
         try:
             response = yield self._execute([b'AUTH', password])
         except RedisError as error:
-            raise AuthenticationError(str(error)[4:])
+            raise AuthError(str(error)[4:])
         raise gen.Return(response == b'OK')
 
     @gen.coroutine
@@ -128,7 +149,7 @@ class RedisClient(object):
 
         **Command Type**: Server
 
-        :rtype: bytes
+        :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
@@ -352,8 +373,26 @@ class RedisClient(object):
 
 
 class RedisError(Exception):
+    """Raised as a top-level exception class for all exceptions raised by
+    :py:class:`RedisClient <tredis.RedisClient>`. The string representation
+    of this class will contain the error resposne from the Redis server,
+    if one is sent.
+
+    """
     pass
 
 
-class AuthenticationError(RedisError):
+class ConnectError(RedisError):
+    """Raised when :py:class:`RedisClient <tredis.RedisClient>` can not connect
+    to the specified Redis server.
+
+    """
+    pass
+
+
+class AuthError(RedisError):
+    """Raised when :py:meth:`RedisClient.auth <tredis.RedisClient.auth>` is
+    invoked and the Redis server returns an error.
+
+    """
     pass

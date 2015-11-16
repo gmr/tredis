@@ -26,12 +26,29 @@ class BaseTestCase(testing.AsyncTestCase):
         raise gen.Return(self._execute_return)
 
 
+class ConnectTests(testing.AsyncTestCase):
+
+    @testing.gen_test
+    def test_bad_connect_raises_exception(self):
+        client = tredis.RedisClient(str(uuid.uuid4()))
+        with self.assertRaises(tredis.ConnectError):
+            yield client.connect()
+
+    @testing.gen_test
+    def test_bad_db_raises_exception(self):
+        client = tredis.RedisClient(os.getenv('REDIS_HOST'),
+                                    os.getenv('REDIS_PORT'),
+                                    db=255)
+        with self.assertRaises(tredis.RedisError):
+            yield client.connect()
+
+
 class ServerCommandTests(BaseTestCase):
 
     @testing.gen_test
     def test_auth_raises_exception(self):
         yield self.client.connect()
-        with self.assertRaises(tredis.AuthenticationError):
+        with self.assertRaises(tredis.AuthError):
             yield self.client.auth('boom-goes-the-silver-nitrate')
 
     @testing.gen_test
