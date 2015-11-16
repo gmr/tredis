@@ -7,8 +7,10 @@ An simple asynchronous Redis client for Tornado
 import logging
 import socket
 
+from tornado import concurrent
 from tornado import gen
 from tornado import ioloop
+from tornado import iostream
 from tornado import tcpclient
 
 __version__ = '0.1.0'
@@ -55,34 +57,48 @@ class RedisClient(object):
         self._ioloop = ioloop.IOLoop.current()
         self._stream = None
 
-    @gen.coroutine
     def connect(self):
         """Connect to the Redis server, selecting the specified database.
 
+        :rtype: bool
         :raises: :py:class:`ConnectError <tredis.ConnectError>`
                  :py:class:`RedisError <tredis.RedisError>`
 
         """
-        err = None
-        try:
-            self._stream = yield self._client.connect(self._settings[0],
-                                                      self._settings[1])
-        except socket.error as error:
-            err = error
-        finally:
-            if err:
-                raise ConnectError(err)
+        future = concurrent.TracebackFuture()
 
-        if self._settings[2]:
-            yield self.select(self._settings[2])
+        def on_connect(response):
+            exc = response.exception()
+            if exc:
+                if isinstance(exc, socket.error) or \
+                        isinstance(exc, iostream.StreamClosedError):
+                    future.set_exception(ConnectError(str(exc)))
+                else:
+                    future.set_exception(exc)
+            else:
+                self._stream = response.result()
+                self._stream.set_close_callback(self._on_closed)
+                if self._settings[2]:
+                    self._execute([b'SELECT',
+                                   ascii(self._settings[2]).encode('ascii')],
+                                  lambda resp: self._is_ok(resp, future))
+                else:
+                    future.set_result(True)
+
+        connect_future = self._client.connect(self._settings[0],
+                                              self._settings[1])
+        self._ioloop.add_future(connect_future, on_connect)
+        return future
 
     def close(self):
         """Close the connection to the Redis Server"""
         self._stream.close()
 
+    def _on_closed(self):
+        LOGGER.error('Connection closed')
+
     # Server Commands
 
-    @gen.coroutine
     def auth(self, password):
         """Request for authentication in a password-protected Redis server.
         Redis can be instructed to require a password before allowing clients
@@ -90,24 +106,31 @@ class RedisClient(object):
         in the configuration file.
 
         If the password does not match, an
-        :py:class:`AuthenticationError <tredis.AuthenticationError>` exception
+        :py:class:`AuthError <tredis.AuthError>` exception
         will be raised.
 
         **Command Type**: Server
 
-        :param str|bytes password: The password to authenticate with
+        :param str | bytes password: The password to authenticate with
         :rtype: bool
         :raises: :py:class:`AuthError <tredis.AuthError>`
                  :py:class:`RedisError <tredis.RedisError>`
 
         """
-        try:
-            response = yield self._execute([b'AUTH', password])
-        except RedisError as error:
-            raise AuthError(str(error)[4:])
-        raise gen.Return(response == b'OK')
+        future = concurrent.TracebackFuture()
 
-    @gen.coroutine
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                if str(exc) == 'invalid password':
+                    future.set_exception(AuthError(exc))
+                else:
+                    future.set_exception(exc)
+            else:
+                future.set_result(response.result() == b'OK')
+        self._execute([b'AUTH', password], on_response)
+        return future
+
     def echo(self, message):
         """Returns the message that was sent to the Redis server.
 
@@ -119,10 +142,8 @@ class RedisClient(object):
 
 
         """
-        response = yield self._execute([b'ECHO', message])
-        raise gen.Return(response)
+        return self._execute([b'ECHO', message])
 
-    @gen.coroutine
     def ping(self):
         """Returns ``PONG`` if no argument is provided, otherwise return a copy
         of the argument as a bulk. This command is often used to test if a
@@ -139,10 +160,8 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'PING'])
-        raise gen.Return(response)
+        return self._execute([b'PING'])
 
-    @gen.coroutine
     def quit(self):
         """Ask the server to close the connection. The connection is closed as
         soon as all pending replies have been written to the client.
@@ -153,10 +172,10 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'QUIT'])
-        raise gen.Return(response)
+        future = concurrent.TracebackFuture()
+        return self._execute([b'QUIT'],
+                             lambda response: self._is_ok(response, future))
 
-    @gen.coroutine
     def select(self, index=0):
         """Select the DB with having the specified zero-based numeric index.
         New connections always use DB ``0``.
@@ -164,17 +183,17 @@ class RedisClient(object):
         **Command Type**: Server
 
         :param int index: The database to select
-        :rtype: bytes
+        :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'SELECT',
-                                        ascii(index).encode('ascii')])
-        raise gen.Return(response)
+        future = concurrent.TracebackFuture()
+        self._execute([b'SELECT', ascii(index).encode('ascii')],
+                      lambda response: self._is_ok(response, future))
+        return future
 
     # Key Commands
 
-    @gen.coroutine
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
         Returns ``True`` if all keys are removed. If more than one key is
@@ -194,14 +213,25 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'DEL'] + keys)
-        if len(keys) == 1:
-            raise gen.Return(response == b'OK')
-        elif response == len(keys):
-            raise gen.Return(True)
-        raise gen.Return(response)
+        future = concurrent.TracebackFuture()
 
-    @gen.coroutine
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                result = response.result()
+                if len(keys) == 1:
+                    future.set_result(result == b'OK')
+                elif result == len(keys):
+                    future.set_result(True)
+                else:
+                    future.set_exception(
+                        RedisError('Unexpected response: %r' % result))
+
+        self._execute([b'DEL'] + keys, on_response)
+        return future
+
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
         automatically be deleted. A key with an associated timeout is often
@@ -243,11 +273,20 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'EXPIRE', key,
-                                        ascii(timeout).encode('ascii')])
-        raise gen.Return(response == 1)
+        future = concurrent.TracebackFuture()
 
-    @gen.coroutine
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                result = response.result()
+                future.set_result(result == 1)
+
+        self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
+                      on_response)
+        return future
+
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
         This introspection capability allows a Redis client to check how many
@@ -262,12 +301,10 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'TTL', key])
-        raise gen.Return(int(response))
+        return self._execute([b'TTL', key])
 
     # String Commands
 
-    @gen.coroutine
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
         ``None`` is returned. An error is returned if the value stored at key
@@ -282,10 +319,8 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        response = yield self._execute([b'GET', key])
-        raise gen.Return(response)
+        return self._execute([b'GET', key])
 
-    @gen.coroutine
     def set(self, key, value, ex=None, px=None, nx=False, xx=False):
         """Set key to hold the string value. If key already holds a value, it
         is overwritten, regardless of its type. Any previous time to live
@@ -305,6 +340,7 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
+        future = concurrent.TracebackFuture()
         command = [b'SET', key, value]
         if ex:
             command += [b'EX', ascii(ex).encode('ascii')]
@@ -314,8 +350,8 @@ class RedisClient(object):
             command.append(b'NX')
         if xx:
             command.append(b'XX')
-        response = yield self._execute(command)
-        raise gen.Return(response == b'OK')
+        self._execute(command, lambda response: self._is_ok(response, future))
+        return future
 
     @staticmethod
     def _build_command(parts):
@@ -333,43 +369,89 @@ class RedisClient(object):
             command += part + CRLF
         return bytes(command)
 
-    @gen.coroutine
-    def _execute(self, parts):
-        yield self._stream.write(self._build_command(parts))
-        response = yield self._get_response()
-        raise gen.Return(response)
+    def _execute(self, parts, callback=None):
+        future = concurrent.TracebackFuture()
+        self._ioloop.add_future(future, callback)
+        LOGGER.debug('_execute(%r, %r)', parts, callback)
 
-    @gen.coroutine
-    def _get_response(self):
-        first_byte = yield self._stream.read_bytes(1)
-        if first_byte == b'+':
-            data = yield self._stream.read_until(CRLF)
-            raise gen.Return(data.strip())
-        elif first_byte == b'-':
-            data = yield self._stream.read_until(CRLF)
-            error = data.strip().decode('utf-8')
-            if error.startswith('ERR'):
-                error = error[4:]
-            raise RedisError(error)
-        elif first_byte == b':':
-            data = yield self._stream.read_until(CRLF)
-            raise gen.Return(int(data.strip()))
-        elif first_byte == b'$':
-            tmp = yield self._stream.read_until(CRLF)
-            if tmp == b'-1\r\n':
-                raise gen.Return(None)
-            str_len = int(tmp.strip()) + 2
-            data = yield self._stream.read_bytes(str_len)
-            raise gen.Return(data[:-2])
-        elif first_byte == b'*':
-            tmp = yield self._stream.read_until(CRLF)
-            segments = int(tmp.strip()) + 2
-            values = []
-            for index in range(0, segments):
-                value = yield self._get_response()
-                values.append(value)
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                LOGGER.debug('Future exception')
+                future.set_exception(exc)
+            else:
+                result = response.result()
+                LOGGER.debug('Future value: %r', result)
+                future.set_result(result)
+
+        def on_written():
+            LOGGER.debug('Command written')
+            self._get_response(on_response)
+
+        self._stream.write(self._build_command(parts), callback=on_written)
+        return future
+
+    def _get_response(self, callback):
+        LOGGER.debug('In _get_response %r', callback)
+        future = concurrent.TracebackFuture()
+        self._ioloop.add_future(future, callback)
+
+        def on_first_byte(first_byte):
+            LOGGER.debug('future: %r, first_byte: %r', future, first_byte)
+            if first_byte == b'+':
+                def on_response(response):
+                    future.set_result(response[0:-2])
+                self._stream.read_until(CRLF, on_response)
+            elif first_byte == b'-':
+                def on_response(response):
+                    error = response[0:-2].decode('utf-8')
+                    if error.startswith('ERR'):
+                        error = error[4:]
+                    LOGGER.debug('Set exception to RedisError(%s)', error)
+                    future.set_exception(RedisError(error))
+                self._stream.read_until(CRLF, callback=on_response)
+            elif first_byte == b':':
+                def on_response(response):
+                    future.set_result(int(response[:-2]))
+                self._stream.read_until(CRLF, callback=on_response)
+            elif first_byte == b'$':
+                def on_payload(data):
+                    LOGGER.debug('String payload: %r', data)
+                    future.set_result(data[:-2])
+
+                def on_response(size):
+                    if size == b'-1\r\n':
+                        future.set_result(None)
+                    else:
+                        self._stream.read_bytes(int(size.strip()) + 2,
+                                                on_payload)
+                self._stream.read_until(CRLF, callback=on_response)
+                """
+                # Todo Arrays
+                elif first_byte == b'*':
+                    pass
+                """
+            else:
+                raise ValueError(
+                    'Unknown RESP first-byte: {}'.format(first_byte))
+
+        self._stream.read_bytes(1, callback=on_first_byte)
+
+    @staticmethod
+    def _is_ok(response, future):
+        """Method invoked in a lambda to abbreviate the amount of code in
+        each method when checking for an ``OK`` response.
+
+        :param concurrent.Future response: The RedisClient._execute future
+        :param concurrent.Future future: The current method's future
+
+        """
+        exc = response.exception()
+        if exc:
+            future.set_exception(exc)
         else:
-            raise ValueError('Unknown RESP first-byte: {}'.format(first_byte))
+            result = response.result()
+            future.set_result(result == b'OK')
 
 
 class RedisError(Exception):

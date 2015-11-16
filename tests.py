@@ -1,10 +1,9 @@
 import os
-import time
 import uuid
 
 import mock
+from tornado import concurrent
 from tornado import gen
-from tornado import ioloop
 from tornado import testing
 
 import tredis
@@ -19,11 +18,15 @@ class BaseTestCase(testing.AsyncTestCase):
         self.client = tredis.RedisClient(os.getenv('REDIS_HOST'),
                                          os.getenv('REDIS_PORT'),
                                          os.getenv('REDIS_DB'))
-        self._execute_return = None
+        self._execute_result = None
 
-    @gen.coroutine
-    def _execute(self, parts):
-        raise gen.Return(self._execute_return)
+    def _execute(self, parts, callback):
+        future = concurrent.Future()
+        future.add_done_callback(callback)
+        if isinstance(self._execute_result, Exception):
+            future.set_exception(self._execute_result)
+        else:
+            future.set_result(self._execute_result)
 
 
 class ConnectTests(testing.AsyncTestCase):
@@ -46,17 +49,24 @@ class ConnectTests(testing.AsyncTestCase):
 class ServerCommandTests(BaseTestCase):
 
     @testing.gen_test
-    def test_auth_raises_exception(self):
+    def test_auth_raises_redis_error(self):
         yield self.client.connect()
-        with self.assertRaises(tredis.AuthError):
+        with self.assertRaises(tredis.RedisError):
             yield self.client.auth('boom-goes-the-silver-nitrate')
+
+    @testing.gen_test
+    def test_auth_raises_auth_error(self):
+        yield self.client.connect()
+        self._execute_result = tredis.RedisError(b'invalid password')
+        with mock.patch.object(self.client, '_execute', self._execute):
+            with self.assertRaises(tredis.AuthError):
+                yield self.client.auth('boom-goes-the-silver-nitrate')
 
     @testing.gen_test
     def test_auth_returns_true(self):
         yield self.client.connect()
-        with mock.patch.object(self.client, '_execute') as execute:
-            self._execute_return = b'OK'
-            execute.side_effect = self._execute
+        self._execute_result = b'OK'
+        with mock.patch.object(self.client, '_execute', self._execute):
             result = yield self.client.auth('password')
             self.assertTrue(result)
 
@@ -77,13 +87,13 @@ class ServerCommandTests(BaseTestCase):
     def test_quit_response(self):
         yield self.client.connect()
         result = yield self.client.quit()
-        self.assertEqual(result, b'OK')
+        self.assertTrue(result)
 
     @testing.gen_test
     def test_select_response(self):
         yield self.client.connect()
         result = yield self.client.select(1)
-        self.assertEqual(result, b'OK')
+        self.assertTrue(result)
 
 
 class StringAndKeyCommandTests(BaseTestCase):
@@ -124,7 +134,6 @@ class StringAndKeyCommandTests(BaseTestCase):
         result = yield self.client.get(key)
         self.assertIsNone(result)
 
-
     @testing.gen_test
     def test_simple_set_expire_and_ttl(self):
         yield self.client.connect()
@@ -133,8 +142,9 @@ class StringAndKeyCommandTests(BaseTestCase):
         ttl = 5
         result = yield self.client.set(key, value)
         self.assertTrue(result)
+
         result = yield self.client.expire(key, ttl)
         self.assertTrue(result)
+
         result = yield self.client.ttl(key)
         self.assertAlmostEqual(result, ttl)
-
