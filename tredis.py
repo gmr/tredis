@@ -122,7 +122,7 @@ class RedisClient(object):
         def on_response(response):
             exc = response.exception()
             if exc:
-                if str(exc) == b'invalid password':
+                if exc.args[0] == b'invalid password':
                     future.set_exception(AuthError(exc))
                 else:
                     future.set_exception(exc)
