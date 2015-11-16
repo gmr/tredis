@@ -75,8 +75,9 @@ class RedisClient(object):
         **Command Type**: Server
 
         :param str|bytes password: The password to authenticate with
-        :rtype bool: Will be ``True`` if authenticated
-        :raises: tredis.AuthenticationError
+        :rtype: bool
+        :raises: :py:class:`AuthenticationError <tredis.AuthenticationError>`
+                 :py:class:`RedisError <tredis.RedisError>`
 
         """
         try:
@@ -93,7 +94,8 @@ class RedisClient(object):
 
         :param str|bytes message: The message to echo
         :rtype: bytes
-        :raises: RedisError
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
 
         """
         response = yield self._execute([b'ECHO', message])
@@ -113,7 +115,7 @@ class RedisClient(object):
         **Command Type**: Server
 
         :rtype: bytes
-        :raises: RedisError
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'PING'])
@@ -127,7 +129,7 @@ class RedisClient(object):
         **Command Type**: Server
 
         :rtype: bytes
-        :raises: RedisError
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'QUIT'])
@@ -142,7 +144,7 @@ class RedisClient(object):
 
         :param int index: The database to select
         :rtype: bytes
-        :raises: RedisError
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'SELECT',
@@ -168,6 +170,7 @@ class RedisClient(object):
 
         :param str|bytes keys: The key to remove
         :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'DEL'] + keys)
@@ -216,6 +219,7 @@ class RedisClient(object):
         :param str|bytes key: The key to set an expiration for
         :param int timeout: The number of seconds to set the timeout to
         :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'EXPIRE', key,
@@ -234,6 +238,7 @@ class RedisClient(object):
 
         :param str|bytes key: The key to get the TTL for
         :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'TTL', key])
@@ -253,6 +258,7 @@ class RedisClient(object):
 
         :param str|bytes key: The key to get
         :rtype: bytes|None
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         response = yield self._execute([b'GET', key])
@@ -275,6 +281,7 @@ class RedisClient(object):
         :param bool nx: Only set the key if it does not already exist
         :param bool xx: Only set the key if it already exist
         :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
         command = [b'SET', key, value]
