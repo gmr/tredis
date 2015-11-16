@@ -72,7 +72,7 @@ class RedisClient(object):
         :py:class:`AuthenticationError <tredis.AuthenticationError>` exception
         will be raised.
 
-        .. describe:: Server Command
+        **Command Type**: Server
 
         :param str|bytes password: The password to authenticate with
         :rtype bool: Will be ``True`` if authenticated
@@ -89,7 +89,7 @@ class RedisClient(object):
     def echo(self, message):
         """Returns the message that was sent to the Redis server.
 
-        .. describe:: Server Command
+        **Command Type**: Server
 
         :param str|bytes message: The message to echo
         :rtype: bytes
@@ -110,7 +110,7 @@ class RedisClient(object):
         bulk in the second position, unless an argument is provided in which
         case it returns a copy of the argument.
 
-        .. describe:: Server Command
+        **Command Type**: Server
 
         :rtype: bytes
         :raises: RedisError
@@ -124,7 +124,7 @@ class RedisClient(object):
         """Ask the server to close the connection. The connection is closed as
         soon as all pending replies have been written to the client.
 
-        .. describe:: Server Command
+        **Command Type**: Server
 
         :rtype: bytes
         :raises: RedisError
@@ -138,7 +138,7 @@ class RedisClient(object):
         """Select the DB with having the specified zero-based numeric index.
         New connections always use DB ``0``.
 
-        .. describe:: Server Command
+        **Command Type**: Server
 
         :param int index: The database to select
         :rtype: bytes
@@ -164,7 +164,7 @@ class RedisClient(object):
         elements in the list, set, sorted set or hash. Removing a single key
         that holds a string value is O(1).
 
-        .. describe:: Key Command
+        **Command Type**: Key
 
         :param str|bytes keys: The key to remove
         :rtype: bool
@@ -211,7 +211,7 @@ class RedisClient(object):
 
         **Time complexity**: O(1)
 
-        .. describe:: Key Command
+        **Command Type**: Key
 
         :param str|bytes key: The key to set an expiration for
         :param int timeout: The number of seconds to set the timeout to
@@ -230,7 +230,7 @@ class RedisClient(object):
 
         **Time complexity**: O(1)
 
-        .. describe:: Key Command
+        **Command Type**: Key
 
         :param str|bytes key: The key to get the TTL for
         :rtype: int
@@ -249,7 +249,7 @@ class RedisClient(object):
 
         **Time complexity**: O(1)
 
-        .. describe:: String Command
+        **Command Type**: String
 
         :param str|bytes key: The key to get
         :rtype: bytes|None
@@ -266,7 +266,7 @@ class RedisClient(object):
 
         **Time complexity**: O(1)
 
-        .. describe:: String Command
+        **Command Type**: String
 
         :param str|bytes key: The key to remove
         :param str|bytes|int value: The value to set
