@@ -68,11 +68,15 @@ class RedisClient(object):
         to execute commands. This is done using the ``requirepass`` directive
         in the configuration file.
 
-        If the password does not match,
+        If the password does not match, an
+        :py:class:`AuthenticationError <tredis.AuthenticationError>` exception
+        will be raised.
 
-        :param str|bytes password:
+        .. describe:: Server Command
+
+        :param str|bytes password: The password to authenticate with
         :rtype bool: Will be ``True`` if authenticated
-        :raises: RedisError
+        :raises: tredis.AuthenticationError
 
         """
         try:
@@ -83,7 +87,9 @@ class RedisClient(object):
 
     @gen.coroutine
     def echo(self, message):
-        """Returns message
+        """Returns the message that was sent to the Redis server.
+
+        .. describe:: Server Command
 
         :param str|bytes message: The message to echo
         :rtype: bytes
@@ -104,6 +110,8 @@ class RedisClient(object):
         bulk in the second position, unless an argument is provided in which
         case it returns a copy of the argument.
 
+        .. describe:: Server Command
+
         :rtype: bytes
         :raises: RedisError
 
@@ -116,6 +124,8 @@ class RedisClient(object):
         """Ask the server to close the connection. The connection is closed as
         soon as all pending replies have been written to the client.
 
+        .. describe:: Server Command
+
         :rtype: bytes
         :raises: RedisError
 
@@ -127,6 +137,8 @@ class RedisClient(object):
     def select(self, index=0):
         """Select the DB with having the specified zero-based numeric index.
         New connections always use DB ``0``.
+
+        .. describe:: Server Command
 
         :param int index: The database to select
         :rtype: bytes
@@ -146,12 +158,13 @@ class RedisClient(object):
         passed in and not all keys are remove, the number of removed keys is
         returned.
 
-        .. note:: **Time complexity**: O(N) where N is the number of keys that
-                  will be removed. When a key to remove holds a value other
-                  than a string, the individual complexity for this key is O(M)
-                  where M is the number of elements in the list, set, sorted
-                  set or hash. Removing a single key that holds a string value
-                  is O(1).
+        **Time complexity**: O(N) where N is the number of keys that will be
+        removed. When a key to remove holds a value other than a string, the
+        individual complexity for this key is O(M) where M is the number of
+        elements in the list, set, sorted set or hash. Removing a single key
+        that holds a string value is O(1).
+
+        .. describe:: Key Command
 
         :param str|bytes keys: The key to remove
         :rtype: bool
@@ -196,7 +209,9 @@ class RedisClient(object):
         ``Key_A`` had a timeout associated or not, the new key ``Key_A`` will
         inherit all the characteristics of ``Key_B``.
 
-        .. note:: **Time complexity**: O(1)
+        **Time complexity**: O(1)
+
+        .. describe:: Key Command
 
         :param str|bytes key: The key to set an expiration for
         :param int timeout: The number of seconds to set the timeout to
@@ -213,7 +228,9 @@ class RedisClient(object):
         This introspection capability allows a Redis client to check how many
         seconds a given key will continue to be part of the dataset.
 
-        .. note:: **Time complexity**: O(1)
+        **Time complexity**: O(1)
+
+        .. describe:: Key Command
 
         :param str|bytes key: The key to get the TTL for
         :rtype: int
@@ -230,7 +247,9 @@ class RedisClient(object):
         ``None`` is returned. An error is returned if the value stored at key
         is not a string, because ``get`` only handles string values.
 
-        .. note:: **Time complexity**: O(1)
+        **Time complexity**: O(1)
+
+        .. describe:: String Command
 
         :param str|bytes key: The key to get
         :rtype: bytes|None
@@ -245,7 +264,9 @@ class RedisClient(object):
         is overwritten, regardless of its type. Any previous time to live
         associated with the key is discarded on successful SET operation.
 
-        .. note:: **Time complexity**: O(1)
+        **Time complexity**: O(1)
+
+        .. describe:: String Command
 
         :param str|bytes key: The key to remove
         :param str|bytes|int value: The value to set
