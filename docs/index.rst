@@ -1,10 +1,8 @@
-.. TRedis documentation master file, created by
-   sphinx-quickstart on Mon Nov 16 12:41:14 2015.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+TRedis
+======
+An simple asynchronous Redis client for Tornado
 
-Welcome to TRedis's documentation!
-==================================
+|Version| |Downloads| |License| |PythonVersions|
 
 Contents:
 
@@ -12,8 +10,8 @@ Contents:
    :maxdepth: 2
 
    api
-
-
+   example
+   history
 
 Indices and tables
 ==================
@@ -22,3 +20,14 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
+   :target: https://pypi.python.org/pypi/tredis
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/tredis.svg?
+   :target: https://pypi.python.org/pypi/tredis
+
+.. |License| image:: https://img.shields.io/github/license/gmr/tredis.svg?
+   :target: https://github.com/gmr/tredis
+
+.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/tredis.svg?
+   :target: https://github.com/gmr/tredis
