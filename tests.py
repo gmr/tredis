@@ -45,6 +45,15 @@ class ConnectTests(testing.AsyncTestCase):
         with self.assertRaises(tredis.RedisError):
             yield client.connect()
 
+    @testing.gen_test
+    def test_close_invokes_iostream_close(self):
+        client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
+                                    int(os.getenv('REDIS_PORT', '6379')), 0)
+        yield client.connect()
+        with mock.patch.object(client._stream, 'close') as close:
+            client.close()
+            close.assert_called_once_with()
+
 
 class ServerCommandTests(BaseTestCase):
 
@@ -95,8 +104,95 @@ class ServerCommandTests(BaseTestCase):
         result = yield self.client.select(1)
         self.assertTrue(result)
 
+class KeyCommandTests(BaseTestCase):
 
-class StringAndKeyCommandTests(BaseTestCase):
+    @testing.gen_test
+    def test_delete(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value)
+        self.assertTrue(result)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_delete_multi(self):
+        yield self.client.connect()
+        key1 = str(uuid.uuid4()).encode('ascii')
+        key2 = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key1, value)
+        self.assertTrue(result)
+        result = yield self.client.set(key2, value)
+        self.assertTrue(result)
+        result = yield self.client.delete(key1, key2)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_delete_missing_key(self):
+        yield self.client.connect()
+        key1 = str(uuid.uuid4()).encode('ascii')
+        key2 = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key1, value)
+        self.assertTrue(result)
+        result = yield self.client.set(key2, value)
+        self.assertTrue(result)
+        result = yield self.client.delete(key1, key2,
+                                          str(uuid.uuid4()).encode('ascii'))
+        self.assertEqual(result, 2)
+
+    @testing.gen_test
+    def test_delete_with_error(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        self._execute_result = tredis.RedisError('Test Exception')
+        with mock.patch.object(self.client, '_execute', self._execute):
+            with self.assertRaises(tredis.RedisError):
+                yield self.client.delete(key)
+
+    @testing.gen_test
+    def test_dump(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value)
+        self.assertTrue(result)
+        result = yield self.client.dump(key)
+        self.assertIn(value, result)
+
+    @testing.gen_test
+    def test_dump_with_invalid_key(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.dump(key)
+        self.assertIsNone(result)
+
+    @testing.gen_test
+    def test_expire_and_ttl(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        ttl = 5
+        result = yield self.client.set(key, value)
+        self.assertTrue(result)
+        result = yield self.client.expire(key, ttl)
+        self.assertTrue(result)
+        result = yield self.client.ttl(key)
+        self.assertAlmostEqual(result, ttl)
+
+    @testing.gen_test
+    def test_expire_with_error(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value)
+        with self.assertRaises(tredis.RedisError):
+            yield self.client.expire(key, 'abc')
+
+
+class StringCommandTests(BaseTestCase):
 
     @testing.gen_test
     def test_simple_set_and_get(self):
@@ -109,7 +205,7 @@ class StringAndKeyCommandTests(BaseTestCase):
         self.assertEqual(result, value)
 
     @testing.gen_test
-    def test_simple_set_ex(self):
+    def test_set_ex(self):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
@@ -122,7 +218,7 @@ class StringAndKeyCommandTests(BaseTestCase):
         self.assertIsNone(result)
 
     @testing.gen_test
-    def test_simple_set_px(self):
+    def test_set_px(self):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
@@ -135,16 +231,43 @@ class StringAndKeyCommandTests(BaseTestCase):
         self.assertIsNone(result)
 
     @testing.gen_test
-    def test_simple_set_expire_and_ttl(self):
+    def test_set_nx(self):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
-        ttl = 5
+        result = yield self.client.set(key, value, nx=True)
+        self.assertTrue(result)
+        result = yield self.client.get(key)
+        self.assertEqual(result, value)
+
+    @testing.gen_test
+    def test_set_nx_with_value(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value, nx=True)
+        self.assertTrue(result)
+        result = yield self.client.get(key)
+        self.assertEqual(result, value)
+        result = yield self.client.set(key, value, nx=True)
+        self.assertFalse(result)
+
+    @testing.gen_test
+    def test_set_xx_with_value(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
         result = yield self.client.set(key, value)
         self.assertTrue(result)
-
-        result = yield self.client.expire(key, ttl)
+        result = yield self.client.get(key)
+        self.assertEqual(result, value)
+        result = yield self.client.set(key, value, xx=True)
         self.assertTrue(result)
 
-        result = yield self.client.ttl(key)
-        self.assertAlmostEqual(result, ttl)
+    @testing.gen_test
+    def test_set_xx_without_value(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value, xx=True)
+        self.assertFalse(result)

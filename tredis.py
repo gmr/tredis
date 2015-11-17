@@ -5,12 +5,9 @@ An simple asynchronous Redis client for Tornado
 
 """
 import logging
-import socket
 
 from tornado import concurrent
-from tornado import gen
 from tornado import ioloop
-from tornado import iostream
 from tornado import tcpclient
 
 __version__ = '0.1.0'
@@ -20,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 CRLF = b'\r\n'
 
 # Python 2 support for ascii()
-if 'ascii' not in dir(__builtins__):
+if 'ascii' not in dir(__builtins__):  # pragma: nocover
     def ascii(value):
         return '%s' % value
 
@@ -70,11 +67,7 @@ class RedisClient(object):
         def on_connect(response):
             exc = response.exception()
             if exc:
-                if isinstance(exc, socket.error) or \
-                        isinstance(exc, iostream.StreamClosedError):
-                    future.set_exception(ConnectError(str(exc)))
-                else:
-                    future.set_exception(exc)
+                future.set_exception(ConnectError(str(exc)))
             else:
                 self._stream = response.result()
                 self._stream.set_close_callback(self._on_closed)
@@ -111,7 +104,8 @@ class RedisClient(object):
 
         **Command Type**: Server
 
-        :param str | bytes password: The password to authenticate with
+        :param password: The password to authenticate with
+        :type password: str, bytes
         :rtype: bool
         :raises: :py:class:`AuthError <tredis.AuthError>`
                  :py:class:`RedisError <tredis.RedisError>`
@@ -136,7 +130,8 @@ class RedisClient(object):
 
         **Command Type**: Server
 
-        :param str|bytes message: The message to echo
+        :param message: The message to echo
+        :type message: str, bytes
         :rtype: bytes
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
@@ -208,7 +203,8 @@ class RedisClient(object):
 
         **Command Type**: Key
 
-        :param str|bytes keys: The key to remove
+        :param keys: One or more keys to remove
+        :type keys: str, bytes
         :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
@@ -221,16 +217,49 @@ class RedisClient(object):
                 future.set_exception(exc)
             else:
                 result = response.result()
-                if len(keys) == 1:
-                    future.set_result(result == b'OK')
-                elif result == len(keys):
+                if result == len(keys):
                     future.set_result(True)
                 else:
-                    future.set_exception(
-                        RedisError('Unexpected response: %r' % result))
+                    future.set_result(result)
 
-        self._execute([b'DEL'] + keys, on_response)
+        self._execute([b'DEL'] + list(keys), on_response)
         return future
+
+    def dump(self, key):
+        """Serialize the value stored at key in a Redis-specific format and
+        return it to the user. The returned value can be synthesized back into
+        a Redis key using the :py:meth:`restore <tredis.RedisClient.restore>`
+        command.
+
+        The serialization format is opaque and non-standard, however it has a
+        few semantic characteristics:
+            - It contains a 64-bit checksum that is used to make sure errors
+              will be detected. The
+              :py:meth:`restore <tredis.RedisClient.restore>`  command makes
+              sure to check the checksum before synthesizing a key using the
+              serialized value.
+            - Values are encoded in the same format used by RDB.
+            - An RDB version is encoded inside the serialized value, so that
+              different Redis versions with incompatible RDB formats will
+              refuse to process the serialized value.
+            - The serialized value does NOT contain expire information. In
+              order to capture the time to live of the current value the
+              :py:meth:`pttl <tredis.RedisClient.pttl>` command should be used.
+
+        If key does not exist ``None`` is returned.
+
+        **Time complexity**: O(1) to access the key and additional O(N*M) to
+        serialized it, where N is the number of Redis objects composing the
+        value and M their average size. For small string values the time
+        complexity is thus O(1)+O(1*M) where M is small, so simply O(1).
+
+        **Command Type**: Key
+
+        :param str, bytes key: The key to dump
+        :rtype: bytes, None
+
+        """
+        return self._execute([b'DUMP', key])
 
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
@@ -370,29 +399,37 @@ class RedisClient(object):
         return bytes(command)
 
     def _execute(self, parts, callback=None):
+        """Execute a Redis command.
+
+        :param list parts: The list of command parts
+        :param method callback: The optional method to invoke when complete
+        :rtype: :py:class:`tornado.concurrent.Future`
+
+        """
         future = concurrent.TracebackFuture()
         self._ioloop.add_future(future, callback)
-        LOGGER.debug('_execute(%r, %r)', parts, callback)
 
         def on_response(response):
             exc = response.exception()
             if exc:
-                LOGGER.debug('Future exception')
                 future.set_exception(exc)
             else:
                 result = response.result()
-                LOGGER.debug('Future value: %r', result)
                 future.set_result(result)
 
         def on_written():
-            LOGGER.debug('Command written')
             self._get_response(on_response)
 
         self._stream.write(self._build_command(parts), callback=on_written)
         return future
 
     def _get_response(self, callback):
-        LOGGER.debug('In _get_response %r', callback)
+        """Read and parse command execution responses from Redis
+
+        :param method callback: The method to receive the response data
+        :rtype: :py:class:`tornado.concurrent.Future`
+
+        """
         future = concurrent.TracebackFuture()
         self._ioloop.add_future(future, callback)
 
@@ -403,11 +440,10 @@ class RedisClient(object):
                     future.set_result(response[0:-2])
                 self._stream.read_until(CRLF, on_response)
             elif first_byte == b'-':
-                def on_response(response):
+                def on_response(response):  # pragma: nocover
                     error = response[0:-2].decode('utf-8')
                     if error.startswith('ERR'):
                         error = error[4:]
-                    LOGGER.debug('Set exception to RedisError(%s)', error)
                     future.set_exception(RedisError(error))
                 self._stream.read_until(CRLF, callback=on_response)
             elif first_byte == b':':
@@ -416,7 +452,6 @@ class RedisClient(object):
                 self._stream.read_until(CRLF, callback=on_response)
             elif first_byte == b'$':
                 def on_payload(data):
-                    LOGGER.debug('String payload: %r', data)
                     future.set_result(data[:-2])
 
                 def on_response(size):
@@ -431,9 +466,9 @@ class RedisClient(object):
                 elif first_byte == b'*':
                     pass
                 """
-            else:
-                raise ValueError(
-                    'Unknown RESP first-byte: {}'.format(first_byte))
+            else:  # pragma: nocover
+                future.set_exception(ValueError(
+                    'Unknown RESP first-byte: {}'.format(first_byte)))
 
         self._stream.read_bytes(1, callback=on_first_byte)
 
