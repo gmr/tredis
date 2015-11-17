@@ -190,6 +190,12 @@ class KeyCommandTests(base.AsyncTestCase):
         self.assertListEqual(sorted(result), sorted(keys))
 
     @testing.gen_test
+    def test_migrate(self):
+        yield self.client.connect()
+        with self.assertRaises(NotImplementedError):
+            yield self.client.migrate('localhost', 6379, 'test', 0, 100)
+
+    @testing.gen_test
     def test_move(self):
         yield self.client.connect()
         key, value = self.uuid4(2)
@@ -205,7 +211,41 @@ class KeyCommandTests(base.AsyncTestCase):
         self.assertEqual(response, value)
 
     @testing.gen_test
-    def test_expire_and_persist(self):
+    def test_object_encoding(self):
+        yield self.client.connect()
+        key, value1, value2 = self.uuid4(3)
+        result = yield self.client.sadd(key, value1, value2)
+        self.assertTrue(result)
+        result = yield self.client.object_encoding(key)
+        self.assertEqual(result, b'hashtable')
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_object_idle_time(self):
+        yield self.client.connect()
+        key, value1, value2 = self.uuid4(3)
+        result = yield self.client.sadd(key, value1, value2)
+        self.assertTrue(result)
+        result = yield self.client.object_idle_time(key)
+        self.assertEqual(result, 0)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_object_refcount(self):
+        yield self.client.connect()
+        key = self.uuid4()
+        for value in self.uuid4(3):
+            result = yield self.client._execute([b'ZADD', key, b'1', value])
+            self.assertTrue(result)
+        result = yield self.client.object_refcount(key)
+        self.assertEqual(result, 1)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_persist(self):
         yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
@@ -370,6 +410,148 @@ class KeyCommandTests(base.AsyncTestCase):
                 yield self.client.scan(key, 0)
 
     @testing.gen_test
+    def test_sort_invalid_order(self):
+        yield self.client.connect()
+        key = self.uuid4()
+        with self.assertRaises(ValueError):
+            yield self.client.sort(key, alpha=True, order='DOWN')
+
+    @testing.gen_test
+    def test_sort_numeric(self):
+        yield self.client.connect()
+        key = self.uuid4()
+        result = yield self.client.sadd(key, 100, 300, 200)
+        self.assertTrue(result)
+        result = yield self.client.sort(key)
+        self.assertListEqual(result, [b'100', b'200', b'300'])
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_alpha_asc(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        result = yield self.client.sort(key, alpha=True)
+        self.assertListEqual(result, sorted([value1, value2, value3]))
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_alpha_desc(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        result = yield self.client.sort(key, alpha=True, order='DESC')
+        self.assertListEqual(result, sorted([value1, value2, value3],
+                                            reverse=True))
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_alpha_limit_offset(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        result = yield self.client.sort(key, limit=2, offset=1, alpha=True)
+        self.assertListEqual(result, sorted([value1, value2, value3])[1:])
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_alpha_asc_and_store(self):
+        yield self.client.connect()
+        key1, key2, value1, value2, value3 = self.uuid4(5)
+        result = yield self.client.sadd(key1, value1, value2, value3)
+        self.assertTrue(result)
+        result = yield self.client.sort(key1, alpha=True, store_as=key2)
+        self.assertEqual(result, 3)
+        result = yield self.client.type(key2)
+        result = yield self.client._execute([b'LRANGE', key2, 0, 3])
+        self.assertListEqual(result, sorted([value1, value2, value3]))
+        result = yield self.client.delete(key1)
+        self.assertTrue(result)
+        result = yield self.client.delete(key2)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_by(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        values = [value1, value2, value3]
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        expectation = []
+        for index, value in enumerate(values):
+            weight_key = 'weight1_{}'.format(value.decode('utf-8'))
+            result = yield self.expiring_set(weight_key, index)
+            self.assertTrue(result)
+            expectation.append(value)
+
+        result = yield self.client.sort(key, by='weight1_*')
+        self.assertListEqual(result, expectation)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_by_with_external(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        values = [value1, value2, value3]
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        expectation = []
+        for index, value in enumerate(values):
+            weight_key = 'weight2_{}'.format(value.decode('utf-8'))
+            result = yield self.expiring_set(weight_key, index)
+            self.assertTrue(result)
+
+            ext_key = 'obj2_{}'.format(value.decode('utf-8'))
+            ext_val = 'value: {}'.format(index).encode('utf-8')
+            result = yield self.expiring_set(ext_key, ext_val)
+            self.assertTrue(result)
+            expectation.append(ext_val)
+
+        result = yield self.client.sort(key, by='weight2_*', external='obj2_*')
+        self.assertListEqual(result, expectation)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
+    def test_sort_by_with_externals(self):
+        yield self.client.connect()
+        key, value1, value2, value3 = self.uuid4(4)
+        values = [value1, value2, value3]
+        result = yield self.client.sadd(key, value1, value2, value3)
+        self.assertTrue(result)
+        expectation = []
+        for index, value in enumerate(values):
+            weight_key = 'weight2_{}'.format(value.decode('utf-8'))
+            result = yield self.expiring_set(weight_key, index)
+            self.assertTrue(result)
+
+            ext_key = 'obj2a_{}'.format(value.decode('utf-8'))
+            ext_val = 'value1: {}'.format(index).encode('utf-8')
+            result = yield self.expiring_set(ext_key, ext_val)
+            self.assertTrue(result)
+            expectation.append(ext_val)
+
+            ext_key = 'obj2b_{}'.format(value.decode('utf-8'))
+            ext_val = 'value2: {}'.format(index).encode('utf-8')
+            result = yield self.expiring_set(ext_key, ext_val)
+            self.assertTrue(result)
+            expectation.append(ext_val)
+
+        result = yield self.client.sort(key, by='weight2_*',
+                                        external=['obj2a_*', 'obj2b_*'])
+        self.assertListEqual(result, expectation)
+        result = yield self.client.delete(key)
+        self.assertTrue(result)
+
+    @testing.gen_test
     def test_type_string(self):
         yield self.client.connect()
         key, value = self.uuid4(2)
@@ -388,3 +570,12 @@ class KeyCommandTests(base.AsyncTestCase):
         self.assertEqual(result, b'set')
         result = yield self.client.delete(key)
         self.assertTrue(result)
+
+    @testing.gen_test
+    def test_wait(self):
+        yield self.client.connect()
+        key, value = self.uuid4(2)
+        result = yield self.expiring_set(key, value)
+        self.assertTrue(result)
+        result = yield self.client.wait(0, 500)
+        self.assertEqual(result, 0)

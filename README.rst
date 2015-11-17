@@ -25,7 +25,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | HyperLogLog  | 0 of 3   |
 +--------------+----------+
-| Keys         | 18 of 22 |
+| Keys         | 21 of 22 |
 +--------------+----------+
 | Lists        | 0 of 17  |
 +--------------+----------+
@@ -39,7 +39,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Sorted Sets  | 0 of 21  |
 +--------------+----------+
-| Strings      | 2 of 23  |
+| Strings      | 3 of 23  |
 +--------------+----------+
 | Transactions | 0 of 5   |
 +--------------+----------+

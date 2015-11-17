@@ -6,10 +6,15 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class KeysMixin(object):
+    """Mixin providing methods for commands in the "Keys" category.
+
+    @todo: migrate
+
+    """
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
-        Returns ``True`` if all keys are removed. If more than one key is
+        Returns :py:data`True` if all keys are removed. If more than one key is
         passed in and not all keys are remove, the number of removed keys is
         returned.
 
@@ -83,7 +88,7 @@ class KeysMixin(object):
         return self._execute([b'DUMP', key])
 
     def exists(self, key):
-        """Returns ``True`` if the key exists.
+        """Returns :py:data`True` if the key exists.
 
         .. note::
 
@@ -212,6 +217,38 @@ class KeysMixin(object):
         self._execute([b'KEYS', pattern], on_response)
         return future
 
+    def migrate(self, host, port, key, destination_db, timeout,
+                copy=False, replace=False):
+        """Atomically transfer a key from a source Redis instance to a
+        destination Redis instance. On success the key is deleted from the
+        original instance and is guaranteed to exist in the target instance.
+
+        The command is atomic and blocks the two instances for the time
+        required to transfer the key, at any given time the key will appear to
+        exist in a given instance or in the other instance, unless a timeout
+        error occurs.
+
+        .. note::
+
+           **Time complexity**: This command actually executes a DUMP+DEL in
+           the source instance, and a RESTORE in the target instance. See the
+           pages of these commands for time complexity. Also an O(N) data
+           transfer between the two instances is performed.
+
+        :param host: The host to migrate the key to
+        :type host: bytes, str
+        :param port: The port to connect on
+        :param key:The key to migrate
+        :type key: bytes, str
+        :param int destination_db: The database number to select
+        :param int timeout: The maximum idle time in milliseconds
+        :param bool copy: Do not remove the key from the local instance
+        :param bool replace: Replace existing key on the remote instance
+        :raises: NotImplementedError
+
+        """
+        raise NotImplementedError
+
     def move(self, key, db):
         """Move key from the currently selected database (see
         :py:class:`select <tredis.RedisClient.select>`) to the specified
@@ -234,6 +271,56 @@ class KeysMixin(object):
         """
         return self._execute_with_bool_response([b'MOVE', key,
                                                  ascii(db).encode('ascii')])
+
+    def object_encoding(self, key):
+        """Return the kind of internal representation used in order to store
+        the value associated with a key
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param key: The key to get the encoding for
+        :type key: str, bytes
+        :rtype: bytes
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+
+        """
+        return self._execute([b'OBJECT', b'ENCODING', key])
+
+    def object_idle_time(self, key):
+        """Return the number of seconds since the object stored at the
+        specified key is idle (not requested by read or write operations).
+        While the value is returned in seconds the actual resolution of this
+        timer is 10 seconds, but may vary in future implementations of Redis.
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param key: The key to get the idle time for
+        :type key: str, bytes
+        :rtype: int
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+
+        """
+        return self._execute([b'OBJECT', b'IDLETIME', key])
+
+    def object_refcount(self, key):
+        """Return the number of references of the value associated with the
+        specified key. This command is mainly useful for debugging.
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param key: The key to get the refcount for
+        :type key: str, bytes
+        :rtype: int
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+
+        """
+        return self._execute([b'OBJECT', b'REFCOUNT', key])
 
     def persist(self, key):
         """Remove the existing timeout on key, turning the key from volatile
@@ -487,6 +574,67 @@ class KeysMixin(object):
         self._execute(command, on_response)
         return future
 
+    def sort(self, key, by=None, external=None, offset=0, limit=None,
+             order=None, alpha=False, store_as=None):
+        """Returns or stores the elements contained in the list, set or sorted
+        set at key. By default, sorting is numeric and elements are compared by
+        their value interpreted as double precision floating point number.
+
+        The ``external`` parameter is used to specify the
+        `GET <http://redis.io/commands/sort#retrieving-external-keys>_`
+        parameter for retrieving external keys. It can be a single string
+        or a list of strings.
+
+        .. note::
+
+           **Time complexity**: ``O(N+M*log(M))`` where ``N`` is the number of
+           elements in the list or set to sort, and ``M`` the number of
+           returned elements. When the elements are not sorted, complexity is
+           currently ``O(N)`` as there is a copy step that will be avoided in
+           next releases.
+
+        :param key: The key to get the refcount for
+        :type key: str, bytes
+
+        :param by: The optional pattern for external sorting keys
+        :type by: str, bytes
+        :param external: Pattern or list of patterns to return external keys
+        :type external: str, bytes, list
+        :param int offset: The starting offset when using limit
+        :param int limit: The number of elements to return
+        :param order: The sort order - one of ``ASC`` or ``DESC``
+        :type order: str, bytes
+        :param bool alpha: Sort the results lexicographically
+        :param store_as: When specified, the key to store the results as
+        :type store_as: str, bytes, None
+        :rtype: list|int
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`ValueError`
+
+        """
+        if order and order not in [b'ASC', b'DESC', 'ASC', 'DESC']:
+            raise ValueError('invalid sort order "{}"'.format(order))
+
+        command = [b'SORT', key]
+        if by:
+            command += [b'BY', by]
+        if external and isinstance(external, list):
+            for entry in external:
+                command += [b'GET', entry]
+        elif external:
+            command += [b'GET', external]
+        if limit:
+            command += [b'LIMIT', ascii(offset).encode('utf-8'),
+                        ascii(limit).encode('utf-8')]
+        if order:
+            command.append(order)
+        if alpha is True:
+            command.append(b'ALPHA')
+        if store_as:
+            command += [b'STORE', store_as]
+        print(command)
+        return self._execute(command)
+
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
         This introspection capability allows a Redis client to check how many
@@ -520,3 +668,28 @@ class KeysMixin(object):
 
         """
         return self._execute([b'TYPE', key])
+
+    def wait(self, num_slaves, timeout=0):
+        """his command blocks the current client until all the previous write
+        commands are successfully transferred and acknowledged by at least the
+        specified number of slaves. If the timeout, specified in milliseconds,
+        is reached, the command returns even if the specified number of slaves
+        were not yet reached.
+
+        The command will always return the number of slaves that acknowledged
+        the write commands sent before the WAIT command, both in the case where
+        the specified number of slaves are reached, or when the timeout is
+        reached.
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param int num_slaves: Number of slaves to acknowledge previous writes
+        :param int timeout: Timeout in milliseconds
+        :rtype: int
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+
+        """
+        return self._execute([b'WAIT', ascii(num_slaves).encode('ascii'),
+                              ascii(timeout).encode('ascii')])
