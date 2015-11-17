@@ -2,7 +2,7 @@ TRedis
 ======
 An asynchronous Redis client for Tornado
 
-|Version| |Downloads| |Status| |Coverage| |CodeClimate| |License| |PythonVersions|
+|Version| |Downloads| |Status| |Coverage| |CodeClimate| |PythonVersions|
 
 Commands Implemented
 --------------------
@@ -66,9 +66,6 @@ Example
 
 .. |Downloads| image:: https://img.shields.io/pypi/dm/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis
-
-.. |License| image:: https://img.shields.io/github/license/gmr/tredis.svg?
-   :target: https://github.com/gmr/tredis
 
 .. |CodeClimate| image:: https://img.shields.io/codeclimate/github/gmr/tredis.svg?
    :target: https://codeclimate.com/github/gmr/tredis
