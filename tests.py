@@ -64,6 +64,8 @@ class ConnectTests(testing.AsyncTestCase):
         yield client.connect()
         sock_name = client._stream.socket.getsockname()
         print(sock_name)
+        results = yield client._execute([b'CLIENT', b'LIST'])
+        print(results)
         yield client._execute([b'CLIENT', b'KILL',
                                '%s:%s' % (sock_name[0], sock_name[1])])
         callback_method.assert_called_once_with()
