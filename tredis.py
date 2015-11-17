@@ -19,7 +19,13 @@ CRLF = b'\r\n'
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
     def ascii(value):
-        return '%s' % value
+        """Return the string of value
+
+        :param mixed value: The value to return
+        :rtype: str
+
+        """
+        return '{0}'.format(value)
 
 
 class _RESPArrayNamespace(object):
@@ -99,9 +105,7 @@ class RedisClient(object):
         self._stream.close()
 
     def _on_closed(self):
-        """Invoked when the connection is closed,
-
-        """
+        """Invoked when the connection is closed"""
         LOGGER.error('Connection closed')
         if self._on_close_callback:
             self._on_close_callback()
