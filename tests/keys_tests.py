@@ -1,6 +1,8 @@
 import mock
+import os
 import time
 import uuid
+import unittest
 
 from tornado import testing
 
@@ -67,6 +69,8 @@ class KeyCommandTests(base.AsyncTestCase):
         result = yield self.client.get(key)
         self.assertEqual(result, value)
 
+    @unittest.skipIf(os.getenv('TRAVIS') == 'true',
+                     'Travis redis container is too old')
     @testing.gen_test
     def test_dump_and_restore_with_replace(self):
         yield self.client.connect()
