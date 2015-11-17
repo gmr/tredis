@@ -253,18 +253,19 @@ class RedisClient(object):
 
         The serialization format is opaque and non-standard, however it has a
         few semantic characteristics:
-            - It contains a 64-bit checksum that is used to make sure errors
-              will be detected. The
-              :py:meth:`restore <tredis.RedisClient.restore>`  command makes
-              sure to check the checksum before synthesizing a key using the
-              serialized value.
-            - Values are encoded in the same format used by RDB.
-            - An RDB version is encoded inside the serialized value, so that
-              different Redis versions with incompatible RDB formats will
-              refuse to process the serialized value.
-            - The serialized value does NOT contain expire information. In
-              order to capture the time to live of the current value the
-              :py:meth:`pttl <tredis.RedisClient.pttl>` command should be used.
+
+          - It contains a 64-bit checksum that is used to make sure errors
+            will be detected. The
+            :py:meth:`restore <tredis.RedisClient.restore>` command makes sure
+            to check the checksum before synthesizing a key using the serialized
+            value.
+          - Values are encoded in the same format used by RDB.
+          - An RDB version is encoded inside the serialized value, so that
+            different Redis versions with incompatible RDB formats will
+            refuse to process the serialized value.
+          - The serialized value does NOT contain expire information. In
+            order to capture the time to live of the current value the
+            :py:meth:`pttl <tredis.RedisClient.pttl>` command should be used.
 
         If key does not exist ``None`` is returned.
 
@@ -364,7 +365,7 @@ class RedisClient(object):
 
         """
         return self._execute_with_bool_response(
-            [b'EXPIRE', key, ascii(timestamp).encode('ascii')])
+            [b'EXPIREAT', key, ascii(timestamp).encode('ascii')])
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -418,6 +419,10 @@ class RedisClient(object):
         :py:class:`move <tredis.RedisClient.move>` as a locking primitive
         because of this.
 
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
         :param key: The key to move
         :type key: str, bytes
         :param int db: The database number
@@ -445,6 +450,227 @@ class RedisClient(object):
         """
         return self._execute_with_bool_response([b'PERSIST', key])
 
+    def pexpire(self, key, timeout):
+        """This command works exactly like
+        :py:class:`pexpire <tredis.RedisClient.pexpire>` but the time to live
+        of the key is specified in milliseconds instead of seconds.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to set an expiration for
+        :type key: str, bytes
+        :param int timeout: The number of milliseconds to set the timeout to
+        :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute_with_bool_response(
+            [b'PEXPIRE', key, ascii(timeout).encode('ascii')])
+
+    def pexpireat(self, key, timestamp):
+        """:py:class:`pexpireat <tredis.RedisClient.pexpireat>` has the same
+        effect and semantic as
+        :py:class:`expireat <tredis.RedisClient.expireat>`, but the Unix time
+        at which the key will expire is specified in milliseconds instead of
+        seconds.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to set an expiration for
+        :type key: str, bytes
+        :param int timestamp: The expiration UNIX epoch value in milliseconds
+        :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute_with_bool_response(
+            [b'PEXPIREAT', key, ascii(timestamp).encode('ascii')])
+
+    def pttl(self, key):
+        """Like :py:class:`ttl <tredis.RedisClient.ttl>` this command returns
+        the remaining time to live of a key that has an expire set, with the
+        sole difference that :py:class:`ttl <tredis.RedisClient.ttl>` returns
+        the amount of remaining time in seconds while
+        :py:class:`pttl <tredis.RedisClient.pttl>` returns it in milliseconds.
+
+        In Redis 2.6 or older the command returns ``-1`` if the key does not
+        exist or if the key exist but has no associated expire.
+
+        Starting with Redis 2.8 the return value in case of error changed:
+
+         - The command returns ``-2`` if the key does not exist.
+         - The command returns ``-1`` if the key exists but has no associated
+           expire.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to get the PTTL for
+        :type key: str, bytes
+        :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute([b'PTTL', key])
+
+    def randomkey(self):
+        """Return a random key from the currently selected database.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :rtype: bytes
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute([b'RANDOMKEY'])
+
+    def rename(self, key, new_key):
+        """Renames ``key`` to ``new_key``. It returns an error when the source
+        and destination names are the same, or when ``key`` does not exist.
+        If ``new_key`` already exists it is overwritten, when this happens
+        :py:class:`rename <tredis.RedisClient.rename>` executes an implicit
+        :py:class:`delete <tredis.RedisClient.delete>` operation, so if the
+        deleted key contains a very big value it may cause high latency even
+        if :py:class:`rename <tredis.RedisClient.rename>` itself is usually a
+        constant-time operation.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to rename
+        :type key: str, bytes
+        :param new_key: The key to rename it to
+        :type new_key: str, bytes
+        :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        future = concurrent.TracebackFuture()
+        self._execute([b'RENAME', key, new_key],
+                      lambda response: self._is_ok(response, future))
+        return future
+
+    def renamenx(self, key, new_key):
+        """Renames ``key`` to ``new_key`` if ``new_key`` does not yet exist.
+        It returns an error under the same conditions as
+        :py:class:`rename <tredis.RedisClient.rename>`.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to rename
+        :type key: str, bytes
+        :param new_key: The key to rename it to
+        :type new_key: str, bytes
+        :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        future = concurrent.TracebackFuture()
+        self._execute([b'RENAMENX', key, new_key],
+                      lambda response: self._is_ok(response, future))
+        return future
+
+    def restore(self, key, ttl, serialized_value, replace=False):
+        """Create a key associated with a value that is obtained by
+        deserializing the provided serialized value (obtained via
+        :py:class:`dump <tredis.RedisClient.dump>`).
+
+        If ``ttl`` is ``0`` the key is created without any expire, otherwise
+        the specified expire time (in milliseconds) is set.
+
+        :py:class:`restore <tredis.RedisClient.restore>` will return a
+        ``Target key name is busy`` error when key already exists unless you
+        use the :py:class:`restore <tredis.RedisClient.restore>` modifier
+        (Redis 3.0 or greater).
+
+        :py:class:`restore <tredis.RedisClient.restore>` checks the RDB
+        version and data checksum. If they don't match an error is returned.
+
+        **Time complexity:** O(1) to create the new key and additional O(N*M)
+        to reconstruct the serialized value, where N is the number of Redis
+        objects composing the value and M their average size. For small string
+        values the time complexity is thus O(1)+O(1*M) where M is small, so
+        simply O(1). However for sorted set values the complexity is
+        O(N*M*log(N)) because inserting values into sorted sets is O(log(N)).
+
+        **Command Type**: Key
+
+        :param key: The key to get the TTL for
+        :type key: str, bytes
+        :param int ttl: The number of seconds to set the timeout to
+        :param serialized_value: The value to restore to the key
+        :type serialized_value: str, bytes
+        :param bool replace: Replace a pre-existing key
+        :rtype: bool
+
+        """
+        future = concurrent.TracebackFuture()
+        commands = [b'RESTORE', key, ttl, serialized_value]
+        if replace:
+            commands.append(b'REPLACE')
+        self._execute(commands,
+                      lambda response: self._is_ok(response, future))
+        return future
+
+    def scan(self, cursor=0, pattern=None, count=None):
+        """The SCAN command and the closely related commands
+        :py:class:`sscan <tredis.RedisClient.sscan>`,
+        :py:class:`hscan <tredis.RedisClient.hscan>` and
+        :py:class:`zscan <tredis.RedisClient.zscan>` are used in order to
+        incrementally iterate over a collection of elements.
+
+        - :py:class:`scan <tredis.RedisClient.scan>` iterates the set of keys
+          in the currently selected Redis database.
+        - :py:class:`sscan <tredis.RedisClient.sscan>` iterates elements of
+          Sets types.
+        - :py:class:`hscan <tredis.RedisClient.hscan>` iterates fields of Hash
+          types and their associated values.
+        - :py:class:`zscan <tredis.RedisClient.zscan>` iterates elements of
+          Sorted Set types and their associated scores.
+
+        **SCAN basic usage**
+
+        :py:class:`scan <tredis.RedisClient.scan>` is a cursor based iterator.
+        This means that at every call of the command, the server returns an
+        updated cursor that the user needs to use as the cursor argument in
+        the next call.
+
+        An iteration starts when the cursor is set to ``0``, and terminates
+        when the cursor returned by the server is ``0``.
+
+        For more information on :py:class:`scan <tredis.RedisClient.scan>`,
+        visit the `Redis docs on scan <http://redis.io/commands/scan>`_.
+
+        **Time complexity**: O(1) for every call. O(N) for a complete
+        iteration, including enough command calls for the cursor to return
+        back to 0. N is the number of elements inside the collection.
+
+        **Command Type**: Key
+
+        :param int cursor: The server specified cursor value or ``0``
+        :param pattern: An optional pattern to apply for key matching
+        :type pattern: str, bytes
+        :param int count: An optional amount of work to perform in the scan
+        :return:
+
+        """
+        command = [b'SCAN', ascii(cursor).encode('ascii')]
+        if pattern:
+            command += [b'MATCH', pattern]
+        if count:
+            command += [b'COUNT', ascii(count).encode('ascii')]
+        return self._execute(command)
+
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
         This introspection capability allows a Redis client to check how many
@@ -461,6 +687,23 @@ class RedisClient(object):
 
         """
         return self._execute([b'TTL', key])
+
+    def type(self, key):
+        """Returns the string representation of the type of the value stored at
+        key. The different types that can be returned are: string, list, set,
+        zset and hash.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to get the type for
+        :type key: str, bytes
+        :rtype: bytes
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute([b'TYPE', key])
 
     # String Commands
 

@@ -211,13 +211,14 @@ class KeyCommandTests(BaseTestCase):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
-        timestamp = int(time.time()) + 5
         result = yield self.client.set(key, value)
         self.assertTrue(result)
+
+        timestamp = int(time.time()) + 5
         result = yield self.client.expireat(key, timestamp)
         self.assertTrue(result)
         result = yield self.client.ttl(key)
-        self.assertAlmostEqual(result, timestamp)
+        self.assertAlmostEqual(result, 5)
 
     @testing.gen_test
     def test_expireat_with_error(self):
