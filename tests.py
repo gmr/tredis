@@ -104,6 +104,7 @@ class ServerCommandTests(BaseTestCase):
         result = yield self.client.select(1)
         self.assertTrue(result)
 
+
 class KeyCommandTests(BaseTestCase):
 
     @testing.gen_test
@@ -188,8 +189,39 @@ class KeyCommandTests(BaseTestCase):
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
         result = yield self.client.set(key, value)
+        self.assertTrue(result)
         with self.assertRaises(tredis.RedisError):
             yield self.client.expire(key, 'abc')
+
+    @testing.gen_test
+    def test_exists_single(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key, value)
+        self.assertTrue(result)
+        result = yield self.client.exists(key)
+        self.assertEqual(result, 1)
+
+    @testing.gen_test
+    def test_exists_multiple(self):
+        yield self.client.connect()
+        key1 = str(uuid.uuid4()).encode('ascii')
+        key2 = str(uuid.uuid4()).encode('ascii')
+        value = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.set(key1, value)
+        self.assertTrue(result)
+        result = yield self.client.set(key2, value)
+        self.assertTrue(result)
+        result = yield self.client.exists(key1, key2)
+        self.assertEqual(result, 2)
+
+    @testing.gen_test
+    def test_exists_none(self):
+        yield self.client.connect()
+        key = str(uuid.uuid4()).encode('ascii')
+        result = yield self.client.exists(key)
+        self.assertEqual(result, 0)
 
 
 class StringCommandTests(BaseTestCase):

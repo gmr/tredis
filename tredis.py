@@ -255,7 +255,8 @@ class RedisClient(object):
 
         **Command Type**: Key
 
-        :param str, bytes key: The key to dump
+        :param key: The key to dump
+        :type key: str, bytes
         :rtype: bytes, None
 
         """
@@ -296,7 +297,8 @@ class RedisClient(object):
 
         **Command Type**: Key
 
-        :param str|bytes key: The key to set an expiration for
+        :param key: The key to set an expiration for
+        :type key: str, bytes
         :param int timeout: The number of seconds to set the timeout to
         :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
@@ -315,6 +317,27 @@ class RedisClient(object):
         self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
                       on_response)
         return future
+
+    def exists(self, *keys):
+        """Returns if key exists.
+
+        Since Redis 3.0.3 it is possible to specify multiple keys instead of a
+        single one. In such a case, it returns the total number of keys
+        existing. Note that returning 1 or 0 for a single key is just a special
+        case of the variadic usage, so the command is completely backward
+        compatible.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: String
+
+        :param keys: One or more keys to check for
+        :type keys: str, bytes
+        :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute([b'EXISTS'] + list(keys))
 
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
