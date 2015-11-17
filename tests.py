@@ -16,7 +16,7 @@ class BaseTestCase(testing.AsyncTestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
+        self.client = tredis.RedisClient(os.getenv('REDIS_HOST', '127.0.0.1'),
                                          int(os.getenv('REDIS_PORT', '6379')),
                                          int(os.getenv('REDIS_DB', '0')))
         self._execute_result = None
@@ -252,6 +252,17 @@ class KeyCommandTests(BaseTestCase):
         key = str(uuid.uuid4()).encode('ascii')
         result = yield self.client.exists(key)
         self.assertEqual(result, 0)
+
+    @testing.gen_test
+    def test_keys(self):
+        yield self.client.connect()
+        prefix = 'keys-test'
+        keys = ['{}-{}'.format(prefix, str(uuid.uuid4())).encode('ascii')
+                for i in range(0, 10)]
+        for key in keys:
+            yield self.client.set(key, str(uuid.uuid4()), 10)
+        result = yield self.client.keys('{}*'.format(prefix))
+        self.assertListEqual(sorted(result), sorted(keys))
 
 
 class StringCommandTests(BaseTestCase):

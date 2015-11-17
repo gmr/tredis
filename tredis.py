@@ -22,6 +22,13 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
         return '%s' % value
 
 
+class _RESPArrayNamespace(object):
+    """Class for dealing with recursive async calls"""
+    def __init__(self):
+        self.depth = 0
+        self.values = []
+
+
 class RedisClient(object):
     """A simple asynchronous Redis client with a subset of overall Redis
     functionality.
@@ -364,7 +371,7 @@ class RedisClient(object):
 
         :param key: The key to set an expiration for
         :type key: str, bytes
-        :param int timeout: The number of seconds to set the timeout to
+        :param int timestamp: The UNIX epoch value for the expiration
         :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
@@ -381,6 +388,49 @@ class RedisClient(object):
 
         self._execute([b'EXPIRE', key, ascii(timestamp).encode('ascii')],
                       on_response)
+        return future
+
+    def keys(self, pattern):
+        """Returns all keys matching pattern.
+
+        While the time complexity for this operation is O(N), the constant
+        times are fairly low. For example, Redis running on an entry level
+        laptop can scan a 1 million key database in 40 milliseconds.
+
+        **Warning**: consider :py:class:`keys <tredis.RedisClient.keys>` as a
+        command that should only be used in production environments with
+        extreme care. It may ruin performance when it is executed against
+        large databases. This command is intended for debugging and special
+        operations, such as changing your keyspace layout. Don't use
+        :py:class:`keys <tredis.RedisClient.keys>` in your regular application
+        code. If you're looking for a way to find keys in a subset of your
+        keyspace, consider using :py:class:`scan <tredis.RedisClient.scan>`
+        or sets.
+
+        Supported glob-style patterns:
+
+         - h?llo matches hello, hallo and hxllo
+         - h*llo matches hllo and heeeello
+         - h[ae]llo matches hello and hallo, but not hillo
+         - h[^e]llo matches hallo, hbllo, ... but not hello
+         - h[a-b]llo matches hallo and hbllo
+
+        Use \ to escape special characters if you want to match them verbatim.
+
+        **Time complexity**: O(N)
+
+        **Command Type**: Key
+
+        :param pattern: The pattern to use when looking for keys
+        :type pattern: str, bytes
+        :type: list
+
+        """
+        future = concurrent.TracebackFuture()
+
+        def on_response(values):
+            future.set_result(values.result())
+        self._execute([b'KEYS', pattern], on_response)
         return future
 
     def ttl(self, key):
@@ -505,7 +555,6 @@ class RedisClient(object):
         self._ioloop.add_future(future, callback)
 
         def on_first_byte(first_byte):
-            LOGGER.debug('future: %r, first_byte: %r', future, first_byte)
             if first_byte == b'+':
                 def on_response(response):
                     future.set_result(response[0:-2])
@@ -532,16 +581,43 @@ class RedisClient(object):
                         self._stream.read_bytes(int(size.strip()) + 2,
                                                 on_payload)
                 self._stream.read_until(CRLF, callback=on_response)
-                """
-                # Todo Arrays
-                elif first_byte == b'*':
-                    pass
-                """
+            elif first_byte == b'*':
+                def on_complete(values):
+                    array_values = values.result()
+                    future.set_result(values.result())
+
+                def on_segments(segments):
+                    self._read_array(segments, on_complete)
+
+                self._stream.read_until(CRLF, callback=on_segments)
+
             else:  # pragma: nocover
                 future.set_exception(ValueError(
                     'Unknown RESP first-byte: {}'.format(first_byte)))
 
         self._stream.read_bytes(1, callback=on_first_byte)
+
+    def _read_array(self, segments, callback):
+        """Read in an array by calling :py:meth:`RedisClient._get_response`
+        for each element in the array.
+
+        :param int segments: The number of segments to read
+        :param method callback: The method to call when the array is complete
+
+        """
+        future = concurrent.TracebackFuture()
+        self._ioloop.add_future(future, callback)
+        ns = _RESPArrayNamespace()
+        ns.depth = int(segments)
+
+        def on_result(data):
+            ns.values.append(data.result())
+            ns.depth -= 1
+            if not ns.depth:
+                future.set_result(ns.values)
+            else:
+                self._get_response(on_result)
+        self._get_response(on_result)
 
     @staticmethod
     def _is_ok(response, future):
