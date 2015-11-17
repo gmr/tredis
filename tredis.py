@@ -295,16 +295,7 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(response.result() == 1)
-        self._execute([b'EXISTS', key], on_response)
-        return future
+        return self._execute_with_bool_response([b'EXISTS', key])
 
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
@@ -348,18 +339,8 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(response.result() == 1)
-
-        self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
-                      on_response)
-        return future
+        return self._execute_with_bool_response(
+            [b'EXPIRE', key, ascii(timeout).encode('ascii')])
 
     def expireat(self, key, timestamp):
         """:py:class:`expireat <tredis.RedisClient.expireat>` has the same
@@ -382,18 +363,8 @@ class RedisClient(object):
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(response.result() == 1)
-
-        self._execute([b'EXPIRE', key, ascii(timestamp).encode('ascii')],
-                      on_response)
-        return future
+        return self._execute_with_bool_response(
+            [b'EXPIRE', key, ascii(timestamp).encode('ascii')])
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -437,6 +408,42 @@ class RedisClient(object):
             future.set_result(values.result())
         self._execute([b'KEYS', pattern], on_response)
         return future
+
+    def move(self, key, db):
+        """Move key from the currently selected database (see
+        :py:class:`select <tredis.RedisClient.select>`) to the specified
+        destination database. When key already exists in the destination
+        database, or it does not exist in the source database, it does
+        nothing. It is possible to use
+        :py:class:`move <tredis.RedisClient.move>` as a locking primitive
+        because of this.
+
+        :param key: The key to move
+        :type key: str, bytes
+        :param int db: The database number
+        :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute_with_bool_response([b'MOVE', key,
+                                                 ascii(db).encode('ascii')])
+
+    def persist(self, key):
+        """Remove the existing timeout on key, turning the key from volatile
+        (a key with an expire set) to persistent (a key that will never expire
+        as no timeout is associated).
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to move
+        :type key: str, bytes
+        :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute_with_bool_response([b'PERSIST', key])
 
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
@@ -547,6 +554,25 @@ class RedisClient(object):
             self._get_response(on_response)
 
         self._stream.write(self._build_command(parts), callback=on_written)
+        return future
+
+    def _execute_with_bool_response(self, parts):
+        """Execute a command returning a boolean based upon the response.
+
+        :param list parts: The command parts
+        :rtype: bool
+
+        """
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(response.result() == 1)
+
+        self._execute(parts, on_response)
         return future
 
     def _get_response(self, callback):
