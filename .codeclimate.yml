@@ -3,3 +3,4 @@ languages:
 exclude_paths:
   - tests.py
   - setup.py
+  - docs/conf.py
