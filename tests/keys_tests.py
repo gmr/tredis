@@ -571,6 +571,8 @@ class KeyCommandTests(base.AsyncTestCase):
         result = yield self.client.delete(key)
         self.assertTrue(result)
 
+    @unittest.skipIf(os.getenv('TRAVIS') == 'true',
+                     'Travis redis container is too old')
     @testing.gen_test
     def test_wait(self):
         yield self.client.connect()
