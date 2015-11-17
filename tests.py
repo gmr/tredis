@@ -1,5 +1,5 @@
 import os
-import socket
+import time
 import uuid
 
 import mock
@@ -200,12 +200,28 @@ class KeyCommandTests(BaseTestCase):
     @testing.gen_test
     def test_expire_with_error(self):
         yield self.client.connect()
+        with self.assertRaises(tredis.RedisError):
+            yield self.client.expire(str(uuid.uuid4()).encode('ascii'), 'abc')
+
+    @testing.gen_test
+    def test_expireat_and_ttl(self):
+        yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         value = str(uuid.uuid4()).encode('ascii')
+        timestamp = int(time.time()) + 5
         result = yield self.client.set(key, value)
         self.assertTrue(result)
+        result = yield self.client.expireat(key, timestamp)
+        self.assertTrue(result)
+        result = yield self.client.ttl(key)
+        self.assertAlmostEqual(result, timestamp)
+
+    @testing.gen_test
+    def test_expireat_with_error(self):
+        yield self.client.connect()
         with self.assertRaises(tredis.RedisError):
-            yield self.client.expire(key, 'abc')
+            yield self.client.expireat(str(uuid.uuid4()).encode('ascii'),
+                                       'abc')
 
     @testing.gen_test
     def test_exists_single(self):

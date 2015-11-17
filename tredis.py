@@ -348,6 +348,41 @@ class RedisClient(object):
                       on_response)
         return future
 
+    def expireat(self, key, timestamp):
+        """:py:class:`expireat <tredis.RedisClient.expireat>` has the same
+        effect and semantic as :py:class:`expire <tredis.RedisClient.expire>`,
+        but instead of specifying the number of seconds representing the
+        TTL (time to live), it takes an absolute Unix timestamp (seconds since
+        January 1, 1970).
+
+        Please for the specific semantics of the command refer to the
+        documentation of :py:class:`expire <tredis.RedisClient.expire>`.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: Key
+
+        :param key: The key to set an expiration for
+        :type key: str, bytes
+        :param int timeout: The number of seconds to set the timeout to
+        :rtype: bool
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                result = response.result()
+                future.set_result(result == 1)
+
+        self._execute([b'EXPIRE', key, ascii(timestamp).encode('ascii')],
+                      on_response)
+        return future
+
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
         This introspection capability allows a Redis client to check how many
