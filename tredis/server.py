@@ -16,14 +16,14 @@ class ServerMixin(object):
         in the configuration file.
 
         If the password does not match, an
-        :py:class:`AuthError <tredis.exceptions.AuthError>` exception
+        :py:exc:`AuthError <tredis.exceptions.AuthError>` exception
         will be raised.
 
         :param password: The password to authenticate with
         :type password: str, bytes
         :rtype: bool
-        :raises: :py:class:`AuthError <tredis.exceptions.AuthError>`
-                 :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`AuthError <tredis.exceptions.AuthError>`
+                 :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -46,7 +46,7 @@ class ServerMixin(object):
         :param message: The message to echo
         :type message: str, bytes
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
 
         """
@@ -63,7 +63,7 @@ class ServerMixin(object):
         case it returns a copy of the argument.
 
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'PING'])
@@ -73,7 +73,7 @@ class ServerMixin(object):
         soon as all pending replies have been written to the client.
 
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -86,7 +86,7 @@ class ServerMixin(object):
 
         :param int index: The database to select
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()

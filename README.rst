@@ -1,6 +1,6 @@
 TRedis
 ======
-An simple asynchronous Redis client for Tornado
+An asynchronous Redis client for Tornado
 
 |Version| |Downloads| |Status| |Coverage| |CodeClimate| |License| |PythonVersions|
 
@@ -8,6 +8,9 @@ Commands Implemented
 --------------------
 TRedis is a work in progress and not all commands are implemented. The following
 list details each command category and the number of commands implemented in each.
+
+If you need functionality that is not yet implemented, follow the patterns for
+the category mixins that are complete and submit a PR!
 
 +--------------+----------+
 | Category     | Count    |
@@ -32,7 +35,7 @@ list details each command category and the number of commands implemented in eac
 +--------------+----------+
 | Server       | 0 of 30  |
 +--------------+----------+
-| Sets         | 0 of 15  |
+| Sets         | 15 of 15 |
 +--------------+----------+
 | Sorted Sets  | 0 of 21  |
 +--------------+----------+

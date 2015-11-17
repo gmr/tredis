@@ -1,6 +1,6 @@
 TRedis
 ======
-An simple asynchronous Redis client for Tornado
+An asynchronous Redis client for Tornado
 
 |Version| |Downloads| |License| |PythonVersions|
 

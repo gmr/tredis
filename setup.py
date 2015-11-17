@@ -20,7 +20,7 @@ tests_require = ['nose', 'mock', 'codecov', 'coverage']
 
 setuptools.setup(name='tredis',
                  version='0.1.0',
-                 description='An simple asynchronous Redis client for Tornado',
+                 description='An asynchronous Redis client for Tornado',
                  long_description=open('README.rst').read(),
                  author='Gavin M. Roy',
                  author_email='gavinmroy@gmail.com',

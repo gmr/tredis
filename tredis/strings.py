@@ -20,7 +20,7 @@ class StringsMixin(object):
         :param key: The key to get
         :type key: str, bytes
         :rtype: bytes|None
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'GET', key])
@@ -44,7 +44,7 @@ class StringsMixin(object):
         :param bool nx: Only set the key if it does not already exist
         :param bool xx: Only set the key if it already exist
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
