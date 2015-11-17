@@ -377,10 +377,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-        self._execute([b'RENAMENX', key, new_key],
-                      lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_with_bool_response([b'RENAMENX', key, new_key])
 
     def restore(self, key, ttl, serialized_value, replace=False):
         """Create a key associated with a value that is obtained by
@@ -419,7 +416,8 @@ class KeysMixin(object):
 
         """
         future = concurrent.TracebackFuture()
-        commands = [b'RESTORE', key, ttl, serialized_value]
+        commands = [b'RESTORE', key, ascii(ttl).encode('ascii'),
+                    serialized_value]
         if replace:
             commands.append(b'REPLACE')
         self._execute(commands,
@@ -442,7 +440,7 @@ class KeysMixin(object):
         - :py:class:`zscan <tredis.RedisClient.zscan>` iterates elements of
           Sorted Set types and their associated scores.
 
-        **SCAN basic usage**
+        **Basic usage**
 
         :py:class:`scan <tredis.RedisClient.scan>` is a cursor based iterator.
         This means that at every call of the command, the server returns an
@@ -466,16 +464,28 @@ class KeysMixin(object):
         :param pattern: An optional pattern to apply for key matching
         :type pattern: str, bytes
         :param int count: An optional amount of work to perform in the scan
-        :rtype: list
+        :rtype: int, list
+        :returns: A tuple containing the cursor and the list of keys
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                result = response.result()
+                future.set_result((int(result[0]), result[1]))
+
         command = [b'SCAN', ascii(cursor).encode('ascii')]
         if pattern:
             command += [b'MATCH', pattern]
         if count:
             command += [b'COUNT', ascii(count).encode('ascii')]
-        return self._execute(command)
+        self._execute(command, on_response)
+        return future
 
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.

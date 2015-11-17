@@ -128,21 +128,36 @@ class RedisClient(server.ServerMixin,
         """Close the connection to the Redis Server"""
         self._stream.close()
 
-    @staticmethod
-    def _build_command(parts):
+    def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
 
         :param list parts: The list of strings for building the command
         :type: bytes
 
         """
-        parts = [part.encode('utf-8') if isinstance(part, str) else part
-                 for part in parts]
-        command = bytearray(b'*') + ascii(len(parts)).encode('ascii') + CRLF
-        for part in parts:
-            command += b'$' + ascii(len(part)).encode('ascii') + CRLF
-            command += part + CRLF
-        return bytes(command)
+        return self._encode_resp(parts)
+
+    def _encode_resp(self, value):
+        """Dynamically build the RESP payload based upon the list provided.
+
+        :param mixed value: The list of command parts to encode
+        :rtype: bytes
+
+        """
+        if isinstance(value, bytes):
+            return b''.join([b'$', ascii(len(value)).encode('ascii'),
+                             CRLF, value, CRLF])
+        elif isinstance(value, str):  # pragma: nocover
+            return self._encode_resp(value.encode('utf-8'))
+        elif isinstance(value, int):
+            return self._encode_resp(ascii(value).encode('ascii'))
+        elif isinstance(value, list):
+            output = [b'*', ascii(len(value)).encode('ascii'), CRLF]
+            for item in value:
+                output.append(self._encode_resp(item))
+            return b''.join(output)
+        else:
+            raise ValueError('Unsupported type: {0}'.format(type(value)))
 
     def _execute(self, parts, callback=None):
         """Execute a Redis command.

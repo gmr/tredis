@@ -22,9 +22,10 @@ class AsyncTestCase(testing.AsyncTestCase):
         self._execute_result = None
 
     @gen.coroutine
-    def expiring_set(self, key, value, expiration=None):
+    def expiring_set(self, key, value, expiration=None, nx=None, xx=None):
         result = yield self.client.set(key, value,
-                                       expiration or self.DEFAULT_EXPIRATION)
+                                       expiration or self.DEFAULT_EXPIRATION,
+                                       nx=nx, xx=xx)
         raise gen.Return(result)
 
     def _execute(self, parts, callback):
