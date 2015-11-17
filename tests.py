@@ -1,4 +1,5 @@
 import os
+import socket
 import uuid
 
 import mock
@@ -53,6 +54,19 @@ class ConnectTests(testing.AsyncTestCase):
         with mock.patch.object(client._stream, 'close') as close:
             client.close()
             close.assert_called_once_with()
+
+    @testing.gen_test
+    def test_on_close_callback_invoked(self):
+        callback_method = mock.Mock()
+        client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
+                                    int(os.getenv('REDIS_PORT', '6379')), 0,
+                                    callback_method)
+        yield client.connect()
+        sock_name = client._stream.socket.getsockname()
+        print(sock_name)
+        yield client._execute([b'CLIENT', b'KILL',
+                               '%s:%s' % sock_name])
+        callback_method.assert_called_once_with()
 
 
 class ServerCommandTests(BaseTestCase):

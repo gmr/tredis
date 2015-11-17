@@ -37,6 +37,8 @@ class RedisClient(object):
     :param str host: The hostname to connect to
     :param int port: The port to connect on
     :param int db: The database number to use
+    :param on_close_callback: The method to call if the connection is closed
+    :type on_close_callback: method
 
     """
     DEFAULT_HOST = 'localhost'
@@ -48,10 +50,12 @@ class RedisClient(object):
     DEFAULT_DB = 0
     """The default database number to use"""
 
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, db=DEFAULT_DB):
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, db=DEFAULT_DB,
+                 on_close_callback=None):
         self._settings = host, port, int(db or 0)
         self._client = tcpclient.TCPClient()
         self._ioloop = ioloop.IOLoop.current()
+        self._on_close_callback = on_close_callback
         self._stream = None
 
     def connect(self):
@@ -88,7 +92,12 @@ class RedisClient(object):
         self._stream.close()
 
     def _on_closed(self):
+        """Invoked when the connection is closed,
+
+        """
         LOGGER.error('Connection closed')
+        if self._on_close_callback:
+            self._on_close_callback()
 
     # Server Commands
 
@@ -262,6 +271,27 @@ class RedisClient(object):
         """
         return self._execute([b'DUMP', key])
 
+    def exists(self, *keys):
+        """Returns if key exists.
+
+        Since Redis 3.0.3 it is possible to specify multiple keys instead of a
+        single one. In such a case, it returns the total number of keys
+        existing. Note that returning 1 or 0 for a single key is just a special
+        case of the variadic usage, so the command is completely backward
+        compatible.
+
+        **Time complexity**: O(1)
+
+        **Command Type**: String
+
+        :param keys: One or more keys to check for
+        :type keys: str, bytes
+        :rtype: int
+        :raises: :py:class:`RedisError <tredis.RedisError>`
+
+        """
+        return self._execute([b'EXISTS'] + list(keys))
+
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
         automatically be deleted. A key with an associated timeout is often
@@ -318,27 +348,6 @@ class RedisClient(object):
                       on_response)
         return future
 
-    def exists(self, *keys):
-        """Returns if key exists.
-
-        Since Redis 3.0.3 it is possible to specify multiple keys instead of a
-        single one. In such a case, it returns the total number of keys
-        existing. Note that returning 1 or 0 for a single key is just a special
-        case of the variadic usage, so the command is completely backward
-        compatible.
-
-        **Time complexity**: O(1)
-
-        **Command Type**: String
-
-        :param keys: One or more keys to check for
-        :type keys: str, bytes
-        :rtype: int
-        :raises: :py:class:`RedisError <tredis.RedisError>`
-
-        """
-        return self._execute([b'EXISTS'] + list(keys))
-
     def ttl(self, key):
         """Returns the remaining time to live of a key that has a timeout.
         This introspection capability allows a Redis client to check how many
@@ -348,7 +357,8 @@ class RedisClient(object):
 
         **Command Type**: Key
 
-        :param str|bytes key: The key to get the TTL for
+        :param key: The key to get the TTL for
+        :type key: str, bytes
         :rtype: int
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
@@ -366,7 +376,8 @@ class RedisClient(object):
 
         **Command Type**: String
 
-        :param str|bytes key: The key to get
+        :param key: The key to get
+        :type key: str, bytes
         :rtype: bytes|None
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
@@ -382,8 +393,10 @@ class RedisClient(object):
 
         **Command Type**: String
 
-        :param str|bytes key: The key to remove
-        :param str|bytes|int value: The value to set
+        :param key: The key to remove
+        :type key: str, bytes
+        :param value: The value to set
+        :type value: str, bytes, int
         :param int ex: Set the specified expire time, in seconds
         :param int px: Set the specified expire time, in milliseconds
         :param bool nx: Only set the key if it does not already exist
