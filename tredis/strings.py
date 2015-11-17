@@ -9,7 +9,7 @@ class StringsMixin(object):
 
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
-        :py:const:`None` is returned. An error is returned if the value stored
+        :py:data:`None` is returned. An error is returned if the value stored
         at key is not a string, because :py:meth:`get <tredis.RedisClient.get>`
         only handles string values.
 

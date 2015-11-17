@@ -65,7 +65,7 @@ class KeysMixin(object):
             order to capture the time to live of the current value the
             :py:meth:`pttl <tredis.RedisClient.pttl>` command should be used.
 
-        If key does not exist ``None`` is returned.
+        If key does not exist :py:data:`None` is returned.
 
         .. note::
 
@@ -175,7 +175,7 @@ class KeysMixin(object):
         times are fairly low. For example, Redis running on an entry level
         laptop can scan a 1 million key database in 40 milliseconds.
 
-        .. warning: Consider :py:class:`keys <tredis.RedisClient.keys>` as a
+        .. warning:: Consider :py:class:`keys <tredis.RedisClient.keys>` as a
            command that should only be used in production environments with
            extreme care. It may ruin performance when it is executed against
            large databases. This command is intended for debugging and special
