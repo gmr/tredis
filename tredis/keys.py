@@ -13,11 +13,13 @@ class KeysMixin(object):
         passed in and not all keys are remove, the number of removed keys is
         returned.
 
-        **Time complexity**: O(N) where N is the number of keys that will be
-        removed. When a key to remove holds a value other than a string, the
-        individual complexity for this key is O(M) where M is the number of
-        elements in the list, set, sorted set or hash. Removing a single key
-        that holds a string value is O(1).
+        .. note::
+
+           **Time complexity**: ``O(N)`` where ``N`` is the number of keys that
+           will be removed. When a key to remove holds a value other than a
+           string, the individual complexity for this key is ``O(M)`` where
+           ``M`` is the number of elements in the list, set, sorted set or
+           hash. Removing a single key that holds a string value is ``O(1)``.
 
         :param keys: One or more keys to remove
         :type keys: str, bytes
@@ -65,10 +67,13 @@ class KeysMixin(object):
 
         If key does not exist ``None`` is returned.
 
-        **Time complexity**: O(1) to access the key and additional O(N*M) to
-        serialized it, where N is the number of Redis objects composing the
-        value and M their average size. For small string values the time
-        complexity is thus O(1)+O(1*M) where M is small, so simply O(1).
+        .. note::
+
+           **Time complexity**: ``O(1)`` to access the key and additional
+           ``O(N*M)`` to serialized it, where N is the number of Redis objects
+           composing the value and ``M`` their average size. For small string
+           values the time complexity is thus ``O(1)+O(1*M)`` where ``M`` is
+           small, so simply ``O(1)``.
 
         :param key: The key to dump
         :type key: str, bytes
@@ -80,7 +85,9 @@ class KeysMixin(object):
     def exists(self, key):
         """Returns ``True`` if the key exists.
 
-        **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         **Command Type**: String
 
@@ -123,7 +130,9 @@ class KeysMixin(object):
         ``Key_A`` had a timeout associated or not, the new key ``Key_A`` will
         inherit all the characteristics of ``Key_B``.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to set an expiration for
         :type key: str, bytes
@@ -145,7 +154,9 @@ class KeysMixin(object):
         Please for the specific semantics of the command refer to the
         documentation of :py:class:`expire <tredis.RedisClient.expire>`.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to set an expiration for
         :type key: str, bytes
@@ -160,31 +171,34 @@ class KeysMixin(object):
     def keys(self, pattern):
         """Returns all keys matching pattern.
 
-        While the time complexity for this operation is O(N), the constant
+        While the time complexity for this operation is ``O(N)``, the constant
         times are fairly low. For example, Redis running on an entry level
         laptop can scan a 1 million key database in 40 milliseconds.
 
-        **Warning**: consider :py:class:`keys <tredis.RedisClient.keys>` as a
-        command that should only be used in production environments with
-        extreme care. It may ruin performance when it is executed against
-        large databases. This command is intended for debugging and special
-        operations, such as changing your keyspace layout. Don't use
-        :py:class:`keys <tredis.RedisClient.keys>` in your regular application
-        code. If you're looking for a way to find keys in a subset of your
-        keyspace, consider using :py:class:`scan <tredis.RedisClient.scan>`
-        or sets.
+        .. warning: Consider :py:class:`keys <tredis.RedisClient.keys>` as a
+           command that should only be used in production environments with
+           extreme care. It may ruin performance when it is executed against
+           large databases. This command is intended for debugging and special
+           operations, such as changing your keyspace layout. Don't use
+           :py:class:`keys <tredis.RedisClient.keys>` in your regular
+           application code. If you're looking for a way to find keys in a
+           subset of your keyspace, consider using
+           :py:class:`scan <tredis.RedisClient.scan>` or sets.
 
         Supported glob-style patterns:
 
-         - h?llo matches hello, hallo and hxllo
-         - h*llo matches hllo and heeeello
-         - h[ae]llo matches hello and hallo, but not hillo
-         - h[^e]llo matches hallo, hbllo, ... but not hello
-         - h[a-b]llo matches hallo and hbllo
+         - ``h?llo`` matches ``hello``, ``hallo`` and ``hxllo``
+         - ``h*llo`` matches ``hllo`` and ``heeeello``
+         - ``h[ae]llo`` matches ``hello`` and ``hallo``, but not ``hillo``
+         - ``h[^e]llo`` matches ``hallo``, ``hbllo``, but not ``hello``
+         - ``h[a-b]llo`` matches ``hallo`` and ``hbllo``
 
-        Use \ to escape special characters if you want to match them verbatim.
+        Use ``\`` to escape special characters if you want to match them
+        verbatim.
 
-        .. note:: **Time complexity**: O(N)
+        .. note::
+
+           **Time complexity**: ``O(N)``
 
         :param pattern: The pattern to use when looking for keys
         :type pattern: str, bytes
@@ -207,7 +221,9 @@ class KeysMixin(object):
         :py:class:`move <tredis.RedisClient.move>` as a locking primitive
         because of this.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to move
         :type key: str, bytes
@@ -224,7 +240,9 @@ class KeysMixin(object):
         (a key with an expire set) to persistent (a key that will never expire
         as no timeout is associated).
 
-        .. note:: **Time complexity**: O(1)
+         .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to move
         :type key: str, bytes
@@ -239,7 +257,9 @@ class KeysMixin(object):
         :py:class:`pexpire <tredis.RedisClient.pexpire>` but the time to live
         of the key is specified in milliseconds instead of seconds.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to set an expiration for
         :type key: str, bytes
@@ -258,7 +278,9 @@ class KeysMixin(object):
         at which the key will expire is specified in milliseconds instead of
         seconds.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to set an expiration for
         :type key: str, bytes
@@ -286,7 +308,9 @@ class KeysMixin(object):
          - The command returns ``-1`` if the key exists but has no associated
            expire.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to get the PTTL for
         :type key: str, bytes
@@ -299,7 +323,9 @@ class KeysMixin(object):
     def randomkey(self):
         """Return a random key from the currently selected database.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :rtype: bytes
         :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
@@ -317,7 +343,9 @@ class KeysMixin(object):
         if :py:class:`rename <tredis.RedisClient.rename>` itself is usually a
         constant-time operation.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to rename
         :type key: str, bytes
@@ -337,7 +365,9 @@ class KeysMixin(object):
         It returns an error under the same conditions as
         :py:class:`rename <tredis.RedisClient.rename>`.
 
-        .. note:: **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to rename
         :type key: str, bytes
@@ -368,14 +398,15 @@ class KeysMixin(object):
         :py:class:`restore <tredis.RedisClient.restore>` checks the RDB
         version and data checksum. If they don't match an error is returned.
 
-        .. note:: **Time complexity:** O(1) to create the new key and
-                   additional O(N*M) to reconstruct the serialized value, where
-                   N is the number of Redis objects composing the value and M
-                   their average size. For small string values the time
-                   complexity is thus O(1)+O(1*M) where M is small, so simply
-                   O(1). However for sorted set values the complexity is
-                   O(N*M*log(N)) because inserting values into sorted sets is
-                   O(log(N)).
+        .. note::
+
+           **Time complexity**: ``O(1)`` to create the new key and additional
+           ``O(N*M)`` to reconstruct the serialized value, where ``N`` is the
+           number of Redis objects composing the value and ``M`` their average
+           size. For small string values the time complexity is thus
+           ``O(1)+O(1*M)`` where ``M`` is small, so simply ``O(1)``. However
+           for sorted set values the complexity is ``O(N*M*log(N))`` because
+           inserting values into sorted sets is ``O(log(N))``.
 
         :param key: The key to get the TTL for
         :type key: str, bytes
@@ -423,11 +454,12 @@ class KeysMixin(object):
         For more information on :py:class:`scan <tredis.RedisClient.scan>`,
         visit the `Redis docs on scan <http://redis.io/commands/scan>`_.
 
-        .. describe:: Time complexity
+        .. note::
 
-           ``O(1)`` for every call. ``O(N)`` for a complete iteration,
-           including enough command calls for the cursor to return back to 0.
-           N is the number of elements inside the collection.
+           **Time complexity**: ``O(1)`` for every call. ``O(N)`` for a
+           complete iteration, including enough command calls for the cursor to
+           return back to ``0``. ``N`` is the number of elements inside the
+           collection.
 
         :param int cursor: The server specified cursor value or ``0``
         :param pattern: An optional pattern to apply for key matching
@@ -448,9 +480,9 @@ class KeysMixin(object):
         This introspection capability allows a Redis client to check how many
         seconds a given key will continue to be part of the dataset.
 
-        .. describe:: Time complexity
+        .. note::
 
-           ``O(1)``
+           **Time complexity**: ``O(1)``
 
         :param key: The key to get the TTL for
         :type key: str, bytes
@@ -465,7 +497,9 @@ class KeysMixin(object):
         key. The different types that can be returned are: string, list, set,
         zset and hash.
 
-        **Time complexity**: O(1)
+        .. note::
+
+           **Time complexity**: ``O(1)``
 
         :param key: The key to get the type for
         :type key: str, bytes
