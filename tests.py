@@ -218,7 +218,8 @@ class KeyCommandTests(BaseTestCase):
         result = yield self.client.expireat(key, timestamp)
         self.assertTrue(result)
         result = yield self.client.ttl(key)
-        self.assertAlmostEqual(result, 5)
+        self.assertLessEqual(result, 5)
+        self.assertGreater(result, 0)
 
     @testing.gen_test
     def test_expireat_with_error(self):
