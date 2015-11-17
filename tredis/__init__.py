@@ -25,7 +25,6 @@ from tredis import sets
 from tredis import sortedsets
 from tredis import strings
 from tredis import transactions
-from tredis import utils
 
 __version__ = '0.1.0'
 
@@ -35,7 +34,14 @@ CRLF = b'\r\n'
 
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
-    ascii = utils.ascii
+    def ascii(value):
+        """Return the string of value
+
+        :param mixed value: The value to return
+        :rtype: str
+
+        """
+        return '{0}'.format(value)
 
 
 class _RESPArrayNamespace(object):
@@ -45,7 +51,21 @@ class _RESPArrayNamespace(object):
         self.values = []
 
 
-class RedisClient(object):
+class RedisClient(server.ServerMixin,
+                  keys.KeysMixin,
+                  strings.StringsMixin,
+                  geo.GeoMixin,
+                  hashes.HashesMixin,
+                  hyperloglog.HyperLogLogMixin,
+                  lists.ListsMixin,
+                  sets.SetsMixin,
+                  sortedsets.SortedSetsMixin,
+                  pubsub.PubSubMixin,
+                  connection.ConnectionMixin,
+                  cluster.ClusterMixin,
+                  scripting.ScriptingMixin,
+                  transactions.TransactionsMixin,
+                  object):
     """A simple asynchronous Redis client with a subset of overall Redis
     functionality.
 
@@ -80,11 +100,7 @@ class RedisClient(object):
         self._ioloop = ioloop.IOLoop.current()
         self._on_close_callback = on_close_callback
         self._stream = None
-
-        # Command Category Attributes
-        self._keys = keys.Keys(self)
-        self._server = server.Server(self)
-        self._strings = strings.Strings(self)
+        super(RedisClient, self).__init__()
 
     def connect(self):
         """Connect to the Redis server, selecting the specified database.
@@ -104,9 +120,9 @@ class RedisClient(object):
                 self._stream = response.result()
                 self._stream.set_close_callback(self._on_closed)
                 if self._settings[2]:
-                    self.execute([b'SELECT',
-                                  ascii(self._settings[2]).encode('ascii')],
-                                 lambda resp: utils.is_ok(resp, future))
+                    self._execute([b'SELECT',
+                                   ascii(self._settings[2]).encode('ascii')],
+                                  lambda resp: self._is_ok(resp, future))
                 else:
                     future.set_result(True)
 
@@ -119,7 +135,23 @@ class RedisClient(object):
         """Close the connection to the Redis Server"""
         self._stream.close()
 
-    def execute(self, parts, callback=None):
+    @staticmethod
+    def _build_command(parts):
+        """Build the command that will be written to Redis via the socket
+
+        :param list parts: The list of strings for building the command
+        :type: bytes
+
+        """
+        parts = [part.encode('utf-8') if isinstance(part, str) else part
+                 for part in parts]
+        command = bytearray(b'*') + ascii(len(parts)).encode('ascii') + CRLF
+        for part in parts:
+            command += b'$' + ascii(len(part)).encode('ascii') + CRLF
+            command += part + CRLF
+        return bytes(command)
+
+    def _execute(self, parts, callback=None):
         """Execute a Redis command.
 
         :param list parts: The list of command parts
@@ -144,21 +176,40 @@ class RedisClient(object):
         self._stream.write(self._build_command(parts), callback=on_written)
         return future
 
-    @staticmethod
-    def _build_command(parts):
-        """Build the command that will be written to Redis via the socket
+    def _execute_with_bool_response(self, parts):
+        """Execute a command returning a boolean based upon the response.
 
-        :param list parts: The list of strings for building the command
-        :type: bytes
+        :param list parts: The command parts
+        :rtype: bool
 
         """
-        parts = [part.encode('utf-8') if isinstance(part, str) else part
-                 for part in parts]
-        command = bytearray(b'*') + ascii(len(parts)).encode('ascii') + CRLF
-        for part in parts:
-            command += b'$' + ascii(len(part)).encode('ascii') + CRLF
-            command += part + CRLF
-        return bytes(command)
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(response.result() == 1)
+
+        self._execute(parts, on_response)
+        return future
+
+    @staticmethod
+    def _is_ok(response, future):
+        """Method invoked in a lambda to abbreviate the amount of code in
+        each method when checking for an ``OK`` response.
+
+        :param concurrent.Future response: The RedisClient._execute future
+        :param concurrent.Future future: The current method's future
+
+        """
+        exc = response.exception()
+        if exc:
+            future.set_exception(exc)
+        else:
+            result = response.result()
+            future.set_result(result == b'OK')
 
     def _get_response(self, callback):
         """Read and parse command execution responses from Redis

@@ -17,7 +17,7 @@ class AsyncTestCase(testing.AsyncTestCase):
                                          int(os.getenv('REDIS_DB', '0')))
         self._execute_result = None
 
-    def execute(self, parts, callback):
+    def _execute(self, parts, callback):
         future = concurrent.Future()
         future.add_done_callback(callback)
         if isinstance(self._execute_result, Exception):

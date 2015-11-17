@@ -56,7 +56,7 @@ class KeyCommandTests(base.AsyncTestCase):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         self._execute_result = exceptions.RedisError('Test Exception')
-        with mock.patch.object(self.client, 'execute', self.execute):
+        with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.RedisError):
                 yield self.client.delete(key)
 
@@ -139,7 +139,7 @@ class KeyCommandTests(base.AsyncTestCase):
     def test_exists_error(self):
         yield self.client.connect()
         self._execute_result = exceptions.RedisError('Test Exception')
-        with mock.patch.object(self.client, 'execute', self.execute):
+        with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.RedisError):
                 result = yield self.client.exists('foo')
                 self.assertFalse(result)

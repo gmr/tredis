@@ -1,10 +1,7 @@
 from tornado import concurrent
 
-from tredis import base
-from tredis import utils
 
-
-class Strings(base.Category):
+class StringsMixin(object):
 
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
@@ -16,7 +13,7 @@ class Strings(base.Category):
         :param key: The key to get
         :type key: str, bytes
         :rtype: bytes|None
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'GET', key])
@@ -37,7 +34,7 @@ class Strings(base.Category):
         :param bool nx: Only set the key if it does not already exist
         :param bool xx: Only set the key if it already exist
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -50,5 +47,5 @@ class Strings(base.Category):
             command.append(b'NX')
         if xx:
             command.append(b'XX')
-        self._execute(command, lambda response: utils.is_ok(response, future))
+        self._execute(command, lambda response: self._is_ok(response, future))
         return future

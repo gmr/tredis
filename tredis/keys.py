@@ -1,10 +1,7 @@
 from tornado import concurrent
 
-from tredis import base
-from tredis import utils
 
-
-class Keys(base.Category):
+class KeysMixin(object):
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
@@ -328,7 +325,7 @@ class Keys(base.Category):
         """
         future = concurrent.TracebackFuture()
         self._execute([b'RENAME', key, new_key],
-                      lambda response: utils.is_ok(response, future))
+                      lambda response: self._is_ok(response, future))
         return future
 
     def renamenx(self, key, new_key):
@@ -348,7 +345,7 @@ class Keys(base.Category):
         """
         future = concurrent.TracebackFuture()
         self._execute([b'RENAMENX', key, new_key],
-                      lambda response: utils.is_ok(response, future))
+                      lambda response: self._is_ok(response, future))
         return future
 
     def restore(self, key, ttl, serialized_value, replace=False):
@@ -388,7 +385,7 @@ class Keys(base.Category):
         if replace:
             commands.append(b'REPLACE')
         self._execute(commands,
-                      lambda response: utils.is_ok(response, future))
+                      lambda response: self._is_ok(response, future))
         return future
 
     def scan(self, cursor=0, pattern=None, count=None):

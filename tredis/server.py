@@ -1,11 +1,9 @@
 from tornado import concurrent
 
-from tredis import base
 from tredis import exceptions
-from tredis import utils
 
 
-class Server(base.Category):
+class ServerMixin(object):
 
     def auth(self, password):
         """Request for authentication in a password-protected Redis server.
@@ -84,7 +82,7 @@ class Server(base.Category):
         """
         future = concurrent.TracebackFuture()
         return self._execute([b'QUIT'],
-                             lambda response: utils.is_ok(response, future))
+                             lambda response: self._is_ok(response, future))
 
     def select(self, index=0):
         """Select the DB with having the specified zero-based numeric index.
@@ -99,5 +97,5 @@ class Server(base.Category):
         """
         future = concurrent.TracebackFuture()
         self._execute([b'SELECT', ascii(index).encode('ascii')],
-                      lambda response: utils.is_ok(response, future))
+                      lambda response: self._is_ok(response, future))
         return future

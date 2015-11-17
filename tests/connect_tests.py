@@ -46,8 +46,8 @@ class ConnectTests(base.AsyncTestCase):
                                     callback_method)
         yield client.connect()
         sock_name = client._stream.socket.getsockname()
-        results = yield client.execute([b'CLIENT', b'LIST'])
+        results = yield client._execute([b'CLIENT', b'LIST'])
         host = '[%s]' % sock_name[0] if '::' in sock_name[0] else sock_name[0]
-        yield client.execute([b'CLIENT', b'KILL',
+        yield client._execute([b'CLIENT', b'KILL',
                               '%s:%s' % (host, sock_name[1])])
         callback_method.assert_called_once_with()

@@ -22,7 +22,7 @@ class ServerTests(base.AsyncTestCase):
     def test_auth_raises_auth_error(self):
         yield self.client.connect()
         self._execute_result = exceptions.RedisError(b'invalid password')
-        with mock.patch.object(self.client, 'execute', self.execute):
+        with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.AuthError):
                 yield self.client.auth('boom-goes-the-silver-nitrate')
 
@@ -30,7 +30,7 @@ class ServerTests(base.AsyncTestCase):
     def test_auth_returns_true(self):
         yield self.client.connect()
         self._execute_result = b'OK'
-        with mock.patch.object(self.client, 'execute', self.execute):
+        with mock.patch.object(self.client, '_execute', self._execute):
             result = yield self.client.auth('password')
             self.assertTrue(result)
 
