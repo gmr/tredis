@@ -12,7 +12,7 @@ class StringsMixin(object):
         ``None`` is returned. An error is returned if the value stored at key
         is not a string, because ``get`` only handles string values.
 
-        **Time complexity**: O(1)
+        .. topic:: **Time complexity**: O(1)
 
         :param key: The key to get
         :type key: str, bytes
@@ -27,7 +27,7 @@ class StringsMixin(object):
         is overwritten, regardless of its type. Any previous time to live
         associated with the key is discarded on successful SET operation.
 
-        **Time complexity**: O(1)
+        .. topic:: **Time complexity**: O(1)
 
         :param key: The key to remove
         :type key: str, bytes
