@@ -10,6 +10,7 @@ Contents:
    :maxdepth: 2
 
    api
+   exceptions
    example
    history
 

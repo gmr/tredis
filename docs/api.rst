@@ -5,12 +5,5 @@ interface for interacting with Redis.
 
 .. autoclass:: tredis.RedisClient
     :members:
+    :inherited-members:
 
-Exceptions
-----------
-
-.. autoclass:: tredis.RedisError
-
-.. autoclass:: tredis.ConnectError
-
-.. autoclass:: tredis.AuthError
