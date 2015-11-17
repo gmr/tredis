@@ -66,8 +66,9 @@ class ConnectTests(testing.AsyncTestCase):
         print(sock_name)
         results = yield client._execute([b'CLIENT', b'LIST'])
         print(results)
+        host = '[%s]' % sock_name[0] if '::' in sock_name[0] else sock_name[0]
         yield client._execute([b'CLIENT', b'KILL',
-                               '%s:%s' % (sock_name[0], sock_name[1])])
+                               '%s:%s' % (host, sock_name[1])])
         callback_method.assert_called_once_with()
 
 
