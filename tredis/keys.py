@@ -423,10 +423,11 @@ class KeysMixin(object):
         For more information on :py:class:`scan <tredis.RedisClient.scan>`,
         visit the `Redis docs on scan <http://redis.io/commands/scan>`_.
 
-        **Time complexity**
-            ``O(1)`` for every call. ``O(N)`` for a complete iteration,
-            including enough command calls for the cursor to return back to 0.
-            N is the number of elements inside the collection.
+        .. describe:: Time complexity
+
+           ``O(1)`` for every call. ``O(N)`` for a complete iteration,
+           including enough command calls for the cursor to return back to 0.
+           N is the number of elements inside the collection.
 
         :param int cursor: The server specified cursor value or ``0``
         :param pattern: An optional pattern to apply for key matching
@@ -447,8 +448,9 @@ class KeysMixin(object):
         This introspection capability allows a Redis client to check how many
         seconds a given key will continue to be part of the dataset.
 
-        **Time complexity**
-            ``O(1)``
+        .. describe:: Time complexity
+
+           ``O(1)``
 
         :param key: The key to get the TTL for
         :type key: str, bytes
