@@ -14,7 +14,7 @@ class KeysMixin(object):
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
-        Returns :py:data`True` if all keys are removed. If more than one key is
+        Returns :py:data:`True` if all keys are removed. If more than one key is
         passed in and not all keys are remove, the number of removed keys is
         returned.
 
@@ -88,7 +88,7 @@ class KeysMixin(object):
         return self._execute([b'DUMP', key])
 
     def exists(self, key):
-        """Returns :py:data`True` if the key exists.
+        """Returns :py:data:`True` if the key exists.
 
         .. note::
 
