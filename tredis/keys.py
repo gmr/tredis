@@ -1,5 +1,9 @@
 from tornado import concurrent
 
+# Python 2 support for ascii()
+if 'ascii' not in dir(__builtins__):  # pragma: nocover
+    from tredis.compat import ascii
+
 
 class KeysMixin(object):
 

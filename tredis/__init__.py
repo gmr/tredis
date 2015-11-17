@@ -34,14 +34,7 @@ CRLF = b'\r\n'
 
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
-    def ascii(value):
-        """Return the string of value
-
-        :param mixed value: The value to return
-        :rtype: str
-
-        """
-        return '{0}'.format(value)
+    from tredis.compat import ascii
 
 
 class _RESPArrayNamespace(object):

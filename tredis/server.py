@@ -2,6 +2,10 @@ from tornado import concurrent
 
 from tredis import exceptions
 
+# Python 2 support for ascii()
+if 'ascii' not in dir(__builtins__):  # pragma: nocover
+    from tredis.compat import ascii
+
 
 class ServerMixin(object):
 
