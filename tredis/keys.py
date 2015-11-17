@@ -18,7 +18,7 @@ class KeysMixin(object):
         :param keys: One or more keys to remove
         :type keys: str, bytes
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -83,7 +83,7 @@ class KeysMixin(object):
         :param key: One or more keys to check for
         :type key: str, bytes
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response([b'EXISTS', key])
@@ -125,7 +125,7 @@ class KeysMixin(object):
         :type key: str, bytes
         :param int timeout: The number of seconds to set the timeout to
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response(
@@ -147,7 +147,7 @@ class KeysMixin(object):
         :type key: str, bytes
         :param int timestamp: The UNIX epoch value for the expiration
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response(
@@ -209,7 +209,7 @@ class KeysMixin(object):
         :type key: str, bytes
         :param int db: The database number
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response([b'MOVE', key,
@@ -225,7 +225,7 @@ class KeysMixin(object):
         :param key: The key to move
         :type key: str, bytes
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response([b'PERSIST', key])
@@ -241,7 +241,7 @@ class KeysMixin(object):
         :type key: str, bytes
         :param int timeout: The number of milliseconds to set the timeout to
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response(
@@ -260,7 +260,7 @@ class KeysMixin(object):
         :type key: str, bytes
         :param int timestamp: The expiration UNIX epoch value in milliseconds
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute_with_bool_response(
@@ -287,7 +287,7 @@ class KeysMixin(object):
         :param key: The key to get the PTTL for
         :type key: str, bytes
         :rtype: int
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'PTTL', key])
@@ -298,7 +298,7 @@ class KeysMixin(object):
         **Time complexity**: O(1)
 
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'RANDOMKEY'])
@@ -320,7 +320,7 @@ class KeysMixin(object):
         :param new_key: The key to rename it to
         :type new_key: str, bytes
         :rtype: int
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -340,7 +340,7 @@ class KeysMixin(object):
         :param new_key: The key to rename it to
         :type new_key: str, bytes
         :rtype: int
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -445,7 +445,7 @@ class KeysMixin(object):
         :param key: The key to get the TTL for
         :type key: str, bytes
         :rtype: int
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'TTL', key])
@@ -460,7 +460,7 @@ class KeysMixin(object):
         :param key: The key to get the type for
         :type key: str, bytes
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'TYPE', key])

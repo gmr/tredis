@@ -12,10 +12,8 @@ class ServerMixin(object):
         in the configuration file.
 
         If the password does not match, an
-        :py:class:`AuthError <tredis.AuthError>` exception
+        :py:class:`AuthError <tredis.exceptions.AuthError>` exception
         will be raised.
-
-        **Command Type**: Server
 
         :param password: The password to authenticate with
         :type password: str, bytes
@@ -41,12 +39,10 @@ class ServerMixin(object):
     def echo(self, message):
         """Returns the message that was sent to the Redis server.
 
-        **Command Type**: Server
-
         :param message: The message to echo
         :type message: str, bytes
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
 
         """
@@ -62,10 +58,8 @@ class ServerMixin(object):
         bulk in the second position, unless an argument is provided in which
         case it returns a copy of the argument.
 
-        **Command Type**: Server
-
         :rtype: bytes
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'PING'])
@@ -74,10 +68,8 @@ class ServerMixin(object):
         """Ask the server to close the connection. The connection is closed as
         soon as all pending replies have been written to the client.
 
-        **Command Type**: Server
-
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
@@ -88,11 +80,9 @@ class ServerMixin(object):
         """Select the DB with having the specified zero-based numeric index.
         New connections always use DB ``0``.
 
-        **Command Type**: Server
-
         :param int index: The database to select
         :rtype: bool
-        :raises: :py:class:`RedisError <tredis.RedisError>`
+        :raises: :py:class:`RedisError <tredis.exceptions.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
