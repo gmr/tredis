@@ -9,8 +9,9 @@ class StringsMixin(object):
 
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
-        ``None`` is returned. An error is returned if the value stored at key
-        is not a string, because ``get`` only handles string values.
+        :py:const:`None` is returned. An error is returned if the value stored
+        at key is not a string, because :py:meth:`get <tredis.RedisClient.get>`
+        only handles string values.
 
         .. note::
 
@@ -27,7 +28,8 @@ class StringsMixin(object):
     def set(self, key, value, ex=None, px=None, nx=False, xx=False):
         """Set key to hold the string value. If key already holds a value, it
         is overwritten, regardless of its type. Any previous time to live
-        associated with the key is discarded on successful SET operation.
+        associated with the key is discarded on successful
+        :py:meth:`set <tredis.RedisClient.set>` operation.
 
         .. note::
 
