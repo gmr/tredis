@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from tornado import concurrent
 from tornado import testing
@@ -24,3 +25,6 @@ class AsyncTestCase(testing.AsyncTestCase):
             future.set_exception(self._execute_result)
         else:
             future.set_result(self._execute_result)
+
+    def uuid4(self):
+        return str(uuid.uuid4()).encode('ascii')

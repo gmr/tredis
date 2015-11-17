@@ -1,6 +1,3 @@
-"""
-
-"""
 import uuid
 
 from tornado import gen
@@ -9,7 +6,7 @@ from tornado import testing
 from . import base
 
 
-class SetTests(base.AsyncTestCase):
+class StringTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_simple_set_and_get(self):
