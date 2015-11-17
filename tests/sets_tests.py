@@ -12,36 +12,28 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sadd_single(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value = self.uuid4()
+        key, value = self.uuid4(2)
         result = yield self.client.sadd(key, value)
         self.assertEqual(result, 1)
 
     @testing.gen_test
     def test_sadd_multiple(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
 
     @testing.gen_test
     def test_sadd_multiple_dupe(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3, value3)
         self.assertEqual(result, 3)
 
     @testing.gen_test
     def test_sadd_with_error(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value = self.uuid4()
+        key, value = self.uuid4(2)
         self._execute_result = exceptions.RedisError('Test Exception')
         with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.RedisError):
@@ -50,11 +42,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sdiff(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, value1, value2, value3 = self.uuid4(5)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value1, value3)
@@ -65,12 +53,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sdiffstore(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        key3 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, key3, value1, value2, value3 = self.uuid4(6)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value1, value3)
@@ -83,11 +66,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sinter(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, value1, value2, value3 = self.uuid4(5)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value2, value3)
@@ -98,12 +77,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sinterstore(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        key3 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, key3, value1, value2, value3 = self.uuid4(6)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value2, value3)
@@ -116,8 +90,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sadd_sismember_true(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value = self.uuid4()
+        key, value = self.uuid4(2)
         result = yield self.client.sadd(key, value)
         self.assertTrue(result)
         result = yield self.client.sismember(key, value)
@@ -126,9 +99,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sadd_sismember_false(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
+        key, value1, value2 = self.uuid4(3)
         result = yield self.client.sadd(key, value1)
         self.assertTrue(result)
         result = yield self.client.sismember(key, value2)
@@ -137,10 +108,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_scard(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
         result = yield self.client.scard(key)
@@ -149,10 +117,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_smembers(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
         result = yield self.client.smembers(key)
@@ -161,9 +126,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_smove(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        value1 = self.uuid4()
+        key1, key2, value1 = self.uuid4(3)
         result = yield self.client.sadd(key1, value1)
         self.assertTrue(result)
         result = yield self.client.smove(key1, key2, value1)
@@ -176,10 +139,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_spop(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -191,10 +151,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_srandmember(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -206,10 +163,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_srandmember_multi(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -221,10 +175,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_srem(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -238,9 +189,7 @@ class SetTests(base.AsyncTestCase):
     def test_srem_dupe(self):
         yield self.client.connect()
         key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -253,8 +202,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_srem_with_error(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value = self.uuid4()
+        key, value = self.uuid4(2)
         self._execute_result = exceptions.RedisError('Test Exception')
         with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.RedisError):
@@ -263,10 +211,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sscan(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -277,10 +222,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sscan_with_pattern(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -291,10 +233,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sscan_with_pattern_and_count(self):
         yield self.client.connect()
-        key = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, *values)
         self.assertTrue(result)
@@ -306,7 +245,6 @@ class SetTests(base.AsyncTestCase):
     def test_sscan_with_error(self):
         yield self.client.connect()
         key = self.uuid4()
-        value = self.uuid4()
         self._execute_result = exceptions.RedisError('Test Exception')
         with mock.patch.object(self.client, '_execute', self._execute):
             with self.assertRaises(exceptions.RedisError):
@@ -315,11 +253,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_sunion(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, key3, value1, value2, value3 = self.uuid4(6)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value2, value3)
@@ -330,12 +264,7 @@ class SetTests(base.AsyncTestCase):
     @testing.gen_test
     def test_suinionstore(self):
         yield self.client.connect()
-        key1 = self.uuid4()
-        key2 = self.uuid4()
-        key3 = self.uuid4()
-        value1 = self.uuid4()
-        value2 = self.uuid4()
-        value3 = self.uuid4()
+        key1, key2, key3, value1, value2, value3 = self.uuid4(6)
         result = yield self.client.sadd(key1, value1, value2)
         self.assertTrue(result)
         result = yield self.client.sadd(key2, value2, value3)
