@@ -234,27 +234,23 @@ class KeyCommandTests(BaseTestCase):
         result = yield self.client.set(key, value)
         self.assertTrue(result)
         result = yield self.client.exists(key)
-        self.assertEqual(result, 1)
-
-    @testing.gen_test
-    def test_exists_multiple(self):
-        yield self.client.connect()
-        key1 = str(uuid.uuid4()).encode('ascii')
-        key2 = str(uuid.uuid4()).encode('ascii')
-        value = str(uuid.uuid4()).encode('ascii')
-        result = yield self.client.set(key1, value)
         self.assertTrue(result)
-        result = yield self.client.set(key2, value)
-        self.assertTrue(result)
-        result = yield self.client.exists(key1, key2)
-        self.assertEqual(result, 2)
 
     @testing.gen_test
     def test_exists_none(self):
         yield self.client.connect()
         key = str(uuid.uuid4()).encode('ascii')
         result = yield self.client.exists(key)
-        self.assertEqual(result, 0)
+        self.assertFalse(result)
+
+    @testing.gen_test
+    def test_exists_error(self):
+        yield self.client.connect()
+        self._execute_result = tredis.RedisError('Test Exception')
+        with mock.patch.object(self.client, '_execute', self._execute):
+            with self.assertRaises(tredis.RedisError):
+                result = yield self.client.exists('foo')
+                self.assertFalse(result)
 
     @testing.gen_test
     def test_keys(self):

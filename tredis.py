@@ -278,26 +278,29 @@ class RedisClient(object):
         """
         return self._execute([b'DUMP', key])
 
-    def exists(self, *keys):
-        """Returns if key exists.
-
-        Since Redis 3.0.3 it is possible to specify multiple keys instead of a
-        single one. In such a case, it returns the total number of keys
-        existing. Note that returning 1 or 0 for a single key is just a special
-        case of the variadic usage, so the command is completely backward
-        compatible.
+    def exists(self, key):
+        """Returns ``True`` if the key exists.
 
         **Time complexity**: O(1)
 
         **Command Type**: String
 
-        :param keys: One or more keys to check for
-        :type keys: str, bytes
-        :rtype: int
+        :param key: One or more keys to check for
+        :type key: str, bytes
+        :rtype: bool
         :raises: :py:class:`RedisError <tredis.RedisError>`
 
         """
-        return self._execute([b'EXISTS'] + list(keys))
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(response.result() == 1)
+        self._execute([b'EXISTS', key], on_response)
+        return future
 
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
@@ -348,8 +351,7 @@ class RedisClient(object):
             if exc:
                 future.set_exception(exc)
             else:
-                result = response.result()
-                future.set_result(result == 1)
+                future.set_result(response.result() == 1)
 
         self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
                       on_response)
@@ -383,8 +385,7 @@ class RedisClient(object):
             if exc:
                 future.set_exception(exc)
             else:
-                result = response.result()
-                future.set_result(result == 1)
+                future.set_result(response.result() == 1)
 
         self._execute([b'EXPIRE', key, ascii(timestamp).encode('ascii')],
                       on_response)
