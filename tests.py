@@ -16,7 +16,7 @@ class BaseTestCase(testing.AsyncTestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.client = tredis.RedisClient(os.getenv('REDIS_HOST', '127.0.0.1'),
+        self.client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                          int(os.getenv('REDIS_PORT', '6379')),
                                          int(os.getenv('REDIS_DB', '0')))
         self._execute_result = None
@@ -65,7 +65,7 @@ class ConnectTests(testing.AsyncTestCase):
         sock_name = client._stream.socket.getsockname()
         print(sock_name)
         yield client._execute([b'CLIENT', b'KILL',
-                               '%s:%s' % sock_name])
+                               '%s:%s' % (sock_name[0], sock_name[1])])
         callback_method.assert_called_once_with()
 
 
