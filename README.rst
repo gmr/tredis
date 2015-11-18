@@ -44,7 +44,7 @@ the category mixins that are complete and submit a PR!
 | Transactions | 0 of 5   |
 +--------------+----------+
 
-For information on local development or contributing, see `CONTRIBUTING.rst`_
+For information on local development or contributing, see `CONTRIBUTING.rst <CONTRIBUTING.rst>`_
 
 Example
 -------
