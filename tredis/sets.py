@@ -6,6 +6,7 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class SetsMixin(object):
+    """Redis Set Commands Mixin"""
 
     def sadd(self, key, *members):
         """Add the specified members to the set stored at key. Specified

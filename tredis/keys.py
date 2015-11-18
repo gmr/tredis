@@ -6,11 +6,7 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class KeysMixin(object):
-    """Mixin providing methods for commands in the "Keys" category.
-
-    @todo: migrate
-
-    """
+    """Redis Key Commands Mixin"""
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
@@ -247,7 +243,17 @@ class KeysMixin(object):
         :raises: NotImplementedError
 
         """
-        raise NotImplementedError
+        future = concurrent.TracebackFuture()
+        command = [b'MIGRATE', host, ascii(port).encode('ascii'), key,
+                   ascii(destination_db).encode('ascii'),
+                   ascii(timeout).encode('ascii')]
+        if copy is True:
+            command.append(b'COPY')
+        if replace is True:
+            command.append(b'REPLACE')
+        self._execute(command, lambda response: self._is_ok(response, future))
+        print(command)
+        return future
 
     def move(self, key, db):
         """Move key from the currently selected database (see

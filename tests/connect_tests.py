@@ -2,6 +2,7 @@
 
 """
 import os
+import re
 import mock
 import uuid
 
@@ -11,6 +12,8 @@ import tredis
 from tredis import exceptions
 
 from . import base
+
+ADDR_PATTERN = re.compile(r'(addr=([\.\d:]+))')
 
 
 class ConnectTests(base.AsyncTestCase):
@@ -41,13 +44,18 @@ class ConnectTests(base.AsyncTestCase):
     @testing.gen_test
     def test_on_close_callback_invoked(self):
         callback_method = mock.Mock()
+
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                     int(os.getenv('REDIS_PORT', '6379')), 0,
                                     callback_method)
         yield client.connect()
-        sock_name = client._stream.socket.getsockname()
+        result = yield client.set('foo', 'bar', 10)
+        self.assertTrue(result)
         results = yield client._execute([b'CLIENT', b'LIST'])
-        host = '[%s]' % sock_name[0] if '::' in sock_name[0] else sock_name[0]
-        yield client._execute([b'CLIENT', b'KILL',
-                              '%s:%s' % (host, sock_name[1])])
+        matches = ADDR_PATTERN.findall(results.decode('ascii'))
+        value = None
+        for match, addr in matches:
+            value = addr
+        self.assertIsNotNone(value, 'Could not find client')
+        yield client._execute([b'CLIENT', b'KILL', value.encode('ascii')])
         callback_method.assert_called_once_with()

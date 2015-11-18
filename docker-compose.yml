@@ -1,6 +1,6 @@
 %YAML 1.2
 ---
 redis:
-  image: registry.awebertest.com/aweber/alpine-redis:latest
+  image: gavinmroy/alpine-redis:latest
   ports:
     - 6379

@@ -25,7 +25,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | HyperLogLog  | 0 of 3   |
 +--------------+----------+
-| Keys         | 21 of 22 |
+| Keys         | 22 of 22 |
 +--------------+----------+
 | Lists        | 0 of 17  |
 +--------------+----------+
@@ -54,6 +54,23 @@ Example
 
    yield client.set('foo', 'bar')
    value = yield client.get('foo')
+
+Local Development
+-----------------
+The development environment for tredis uses `docker-compose <https://docs.docker.com/compose/>`_
+and `docker-machine <https://docs.docker.com/machine/>`_
+
+To get setup in the environment and run the tests, take the following steps:
+.. code:: bash
+
+    virtualenv -p python3 env
+    source env/bin/activate
+
+    ./bootstrap
+    source build/env-vars
+
+    nosetests
+
 
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis

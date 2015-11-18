@@ -6,6 +6,7 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class StringsMixin(object):
+    """Redis String Commands Mixin"""
 
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
