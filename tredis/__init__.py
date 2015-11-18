@@ -39,26 +39,18 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 class _RESPArrayNamespace(object):
     """Class for dealing with recursive async calls"""
+
     def __init__(self):
         self.depth = 0
         self.values = []
 
 
-class RedisClient(server.ServerMixin,
-                  keys.KeysMixin,
-                  strings.StringsMixin,
-                  geo.GeoMixin,
-                  hashes.HashesMixin,
-                  hyperloglog.HyperLogLogMixin,
-                  lists.ListsMixin,
-                  sets.SetsMixin,
-                  sortedsets.SortedSetsMixin,
-                  pubsub.PubSubMixin,
-                  connection.ConnectionMixin,
-                  cluster.ClusterMixin,
-                  scripting.ScriptingMixin,
-                  transactions.TransactionsMixin,
-                  object):
+class RedisClient(
+        server.ServerMixin, keys.KeysMixin, strings.StringsMixin, geo.GeoMixin,
+        hashes.HashesMixin, hyperloglog.HyperLogLogMixin, lists.ListsMixin,
+        sets.SetsMixin, sortedsets.SortedSetsMixin, pubsub.PubSubMixin,
+        connection.ConnectionMixin, cluster.ClusterMixin,
+        scripting.ScriptingMixin, transactions.TransactionsMixin, object):
     """A simple asynchronous Redis client with a subset of overall Redis
     functionality.
 
@@ -86,7 +78,10 @@ class RedisClient(server.ServerMixin,
     DEFAULT_DB = 0
     """The default database number to use"""
 
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, db=DEFAULT_DB,
+    def __init__(self,
+                 host=DEFAULT_HOST,
+                 port=DEFAULT_PORT,
+                 db=DEFAULT_DB,
                  on_close_callback=None):
         self._settings = host, port, int(db or self.DEFAULT_DB)
         self._client = tcpclient.TCPClient()
@@ -106,6 +101,12 @@ class RedisClient(server.ServerMixin,
         future = concurrent.TracebackFuture()
 
         def on_connect(response):
+            """Invoked when the socket stream has connected
+
+            :param response: The connection response future
+            :type response: :py:class:`tornado.concurrent.Future`
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exceptions.ConnectError(str(exc)))
@@ -113,9 +114,9 @@ class RedisClient(server.ServerMixin,
                 self._stream = response.result()
                 self._stream.set_close_callback(self._on_closed)
                 if self._settings[2]:
-                    self._execute([b'SELECT',
-                                   ascii(self._settings[2]).encode('ascii')],
-                                  lambda resp: self._is_ok(resp, future))
+                    self._execute(
+                        [b'SELECT', ascii(self._settings[2]).encode('ascii')],
+                        lambda resp: self._is_ok(resp, future))
                 else:
                     future.set_result(True)
 
@@ -145,8 +146,8 @@ class RedisClient(server.ServerMixin,
 
         """
         if isinstance(value, bytes):
-            return b''.join([b'$', ascii(len(value)).encode('ascii'),
-                             CRLF, value, CRLF])
+            return b''.join([b'$', ascii(len(value)).encode('ascii'), CRLF,
+                             value, CRLF])
         elif isinstance(value, str):  # pragma: nocover
             return self._encode_resp(value.encode('utf-8'))
         elif isinstance(value, int):
@@ -171,6 +172,12 @@ class RedisClient(server.ServerMixin,
         self._ioloop.add_future(future, callback)
 
         def on_response(response):
+            """Process the response future
+
+            :param response: The response future
+            :type response: :py:class:`tornado.concurrent.Future`
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -179,6 +186,7 @@ class RedisClient(server.ServerMixin,
                 future.set_result(result)
 
         def on_written():
+            """Invoked when the command has been written to the socket"""
             self._get_response(on_response)
 
         self._stream.write(self._build_command(parts), callback=on_written)
@@ -194,6 +202,12 @@ class RedisClient(server.ServerMixin,
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the response future
+
+            :param response: The response future
+            :type response: :py:class:`tornado.concurrent.Future`
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -208,8 +222,10 @@ class RedisClient(server.ServerMixin,
         """Method invoked in a lambda to abbreviate the amount of code in
         each method when checking for an ``OK`` response.
 
-        :param concurrent.Future response: The RedisClient._execute future
+        :param response: The RedisClient._execute future
+        :type response: :py:class:`tornado.concurrent.Future`
         :param concurrent.Future future: The current method's future
+        :type future: :py:class:`tornado.concurrent.Future`
 
         """
         exc = response.exception()
@@ -230,38 +246,95 @@ class RedisClient(server.ServerMixin,
         self._ioloop.add_future(future, callback)
 
         def on_first_byte(first_byte):
+            """Process the first byte response data
+
+            :param first_byte: The byte indicating the RESP data type
+            :type first_byte: bytes
+
+            """
             if first_byte == b'+':
+
                 def on_response(response):
+                    """Process the response data
+
+                    :param response: The response data
+                    :type response: bytes
+
+                    """
                     future.set_result(response[0:-2])
+
                 self._stream.read_until(CRLF, on_response)
             elif first_byte == b'-':
+
                 def on_response(response):  # pragma: nocover
+                    """Process the response data
+
+                    :param response: The response data
+                    :type response: bytes
+
+                    """
                     error = response[0:-2].decode('utf-8')
                     if error.startswith('ERR'):
                         error = error[4:]
                     future.set_exception(exceptions.RedisError(error))
+
                 self._stream.read_until(CRLF, callback=on_response)
             elif first_byte == b':':
+
                 def on_response(response):
+                    """Process the response data
+
+                    :param response: The response data
+                    :type response: bytes
+
+                    """
                     future.set_result(int(response[:-2]))
+
                 self._stream.read_until(CRLF, callback=on_response)
             elif first_byte == b'$':
-                def on_payload(data):
-                    future.set_result(data[:-2])
 
-                def on_response(size):
-                    if size == b'-1\r\n':
+                def on_payload(response):
+                    """Process the response data
+
+                    :param response: The response data
+                    :type response: bytes
+
+                    """
+                    future.set_result(response[:-2])
+
+                def on_response(response):
+                    """Process the response data
+
+                    :param response: The response data
+                    :type response: bytes
+
+                    """
+                    if response == b'-1\r\n':
                         future.set_result(None)
                     else:
-                        self._stream.read_bytes(int(size.strip()) + 2,
+                        self._stream.read_bytes(int(response.strip()) + 2,
                                                 on_payload)
+
                 self._stream.read_until(CRLF, callback=on_response)
             elif first_byte == b'*':
-                def on_complete(values):
-                    future.set_result(values.result())
 
-                def on_segments(segments):
-                    self._read_array(segments, on_complete)
+                def on_complete(response):
+                    """Process the response data
+
+                    :param response: The future with the response
+                    :type response: :py:class:`tornado.concurrent.Future`
+
+                    """
+                    future.set_result(response.result())
+
+                def on_segments(response):
+                    """Process the response segment data
+
+                    :param response: The response array segment data
+                    :type response: bytes
+
+                    """
+                    self._read_array(response, on_complete)
 
                 self._stream.read_until(CRLF, callback=on_segments)
 
@@ -284,14 +357,21 @@ class RedisClient(server.ServerMixin,
         ns = _RESPArrayNamespace()
         ns.depth = int(segments)
 
-        def on_result(data):
-            ns.values.append(data.result())
+        def on_response(response):
+            """Process the response data
+
+            :param response: The future with the response
+            :type response: :py:class:`tornado.concurrent.Future`
+
+            """
+            ns.values.append(response.result())
             ns.depth -= 1
             if not ns.depth:
                 future.set_result(ns.values)
             else:
-                self._get_response(on_result)
-        self._get_response(on_result)
+                self._get_response(on_response)
+
+        self._get_response(on_response)
 
     def _on_closed(self):
         """Invoked when the connection is closed"""

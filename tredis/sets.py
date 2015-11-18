@@ -1,3 +1,4 @@
+"""Redis Set Commands Mixin"""
 from tornado import concurrent
 
 # Python 2 support for ascii()
@@ -35,6 +36,12 @@ class SetsMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -44,6 +51,7 @@ class SetsMixin(object):
                     future.set_result(True)
                 else:
                     future.set_result(result)
+
         self._execute([b'SADD', key] + list(members), on_response)
         return future
 
@@ -326,6 +334,12 @@ class SetsMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -335,6 +349,7 @@ class SetsMixin(object):
                     future.set_result(True)
                 else:
                     future.set_result(result)
+
         self._execute([b'SREM', key] + list(members), on_response)
         return future
 
@@ -388,6 +403,12 @@ class SetsMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)

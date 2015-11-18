@@ -10,8 +10,8 @@ class KeysMixin(object):
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
-        Returns :py:data:`True` if all keys are removed. If more than one key is
-        passed in and not all keys are remove, the number of removed keys is
+        Returns :py:data:`True` if all keys are removed. If more than one key
+        is passed in and not all keys are remove, the number of removed keys is
         returned.
 
         .. note::
@@ -31,6 +31,12 @@ class KeysMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -56,8 +62,8 @@ class KeysMixin(object):
           - It contains a 64-bit checksum that is used to make sure errors
             will be detected. The
             :py:meth:`restore <tredis.RedisClient.restore>` command makes sure
-            to check the checksum before synthesizing a key using the serialized
-            value.
+            to check the checksum before synthesizing a key using the
+            serialized value.
           - Values are encoded in the same format used by RDB.
           - An RDB version is encoded inside the serialized value, so that
             different Redis versions with incompatible RDB formats will
@@ -142,8 +148,9 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_with_bool_response(
-            [b'EXPIRE', key, ascii(timeout).encode('ascii')])
+        return self._execute_with_bool_response([
+            b'EXPIRE', key, ascii(timeout).encode('ascii')
+        ])
 
     def expireat(self, key, timestamp):
         """:py:class:`expireat <tredis.RedisClient.expireat>` has the same
@@ -166,8 +173,9 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_with_bool_response(
-            [b'EXPIREAT', key, ascii(timestamp).encode('ascii')])
+        return self._execute_with_bool_response([
+            b'EXPIREAT', key, ascii(timestamp).encode('ascii')
+        ])
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -208,13 +216,30 @@ class KeysMixin(object):
         """
         future = concurrent.TracebackFuture()
 
-        def on_response(values):
-            future.set_result(values.result())
+        def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
+            exc = response.exception()
+            if exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(response.result())
+
         self._execute([b'KEYS', pattern], on_response)
         return future
 
-    def migrate(self, host, port, key, destination_db, timeout,
-                copy=False, replace=False):
+    def migrate(self,
+                host,
+                port,
+                key,
+                destination_db,
+                timeout,
+                copy=False,
+                replace=False):
         """Atomically transfer a key from a source Redis instance to a
         destination Redis instance. On success the key is deleted from the
         original instance and is guaranteed to exist in the target instance.
@@ -275,8 +300,9 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_with_bool_response([b'MOVE', key,
-                                                 ascii(db).encode('ascii')])
+        return self._execute_with_bool_response([
+            b'MOVE', key, ascii(db).encode('ascii')
+        ])
 
     def object_encoding(self, key):
         """Return the kind of internal representation used in order to store
@@ -361,8 +387,9 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_with_bool_response(
-            [b'PEXPIRE', key, ascii(timeout).encode('ascii')])
+        return self._execute_with_bool_response([
+            b'PEXPIRE', key, ascii(timeout).encode('ascii')
+        ])
 
     def pexpireat(self, key, timestamp):
         """:py:class:`pexpireat <tredis.RedisClient.pexpireat>` has the same
@@ -382,8 +409,9 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_with_bool_response(
-            [b'PEXPIREAT', key, ascii(timestamp).encode('ascii')])
+        return self._execute_with_bool_response([
+            b'PEXPIREAT', key, ascii(timestamp).encode('ascii')
+        ])
 
     def pttl(self, key):
         """Like :py:class:`ttl <tredis.RedisClient.ttl>` this command returns
@@ -513,8 +541,7 @@ class KeysMixin(object):
                     serialized_value]
         if replace:
             commands.append(b'REPLACE')
-        self._execute(commands,
-                      lambda response: self._is_ok(response, future))
+        self._execute(commands, lambda response: self._is_ok(response, future))
         return future
 
     def scan(self, cursor=0, pattern=None, count=None):
@@ -565,6 +592,12 @@ class KeysMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 future.set_exception(exc)
@@ -580,8 +613,15 @@ class KeysMixin(object):
         self._execute(command, on_response)
         return future
 
-    def sort(self, key, by=None, external=None, offset=0, limit=None,
-             order=None, alpha=False, store_as=None):
+    def sort(self,
+             key,
+             by=None,
+             external=None,
+             offset=0,
+             limit=None,
+             order=None,
+             alpha=False,
+             store_as=None):
         """Returns or stores the elements contained in the list, set or sorted
         set at key. By default, sorting is numeric and elements are compared by
         their value interpreted as double precision floating point number.
@@ -638,7 +678,6 @@ class KeysMixin(object):
             command.append(b'ALPHA')
         if store_as:
             command += [b'STORE', store_as]
-        print(command)
         return self._execute(command)
 
     def ttl(self, key):

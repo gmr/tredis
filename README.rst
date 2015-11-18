@@ -72,6 +72,7 @@ To get setup in the environment and run the tests, take the following steps:
 
     nosetests
 
+Please format
 
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis

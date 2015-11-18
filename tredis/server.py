@@ -1,3 +1,4 @@
+"""Redis Server Commands Mixin"""
 from tornado import concurrent
 
 from tredis import exceptions
@@ -8,7 +9,6 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class ServerMixin(object):
-
     def auth(self, password):
         """Request for authentication in a password-protected Redis server.
         Redis can be instructed to require a password before allowing clients
@@ -29,6 +29,12 @@ class ServerMixin(object):
         future = concurrent.TracebackFuture()
 
         def on_response(response):
+            """Process the redis response
+
+            :param response: The future with the response
+            :type response: tornado.concurrent.Future
+
+            """
             exc = response.exception()
             if exc:
                 if exc.args[0] == b'invalid password':
@@ -37,6 +43,7 @@ class ServerMixin(object):
                     future.set_exception(exc)
             else:
                 future.set_result(response.result() == b'OK')
+
         self._execute([b'AUTH', password], on_response)
         return future
 
@@ -47,7 +54,6 @@ class ServerMixin(object):
         :type message: str, bytes
         :rtype: bytes
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
-
 
         """
         return self._execute([b'ECHO', message])

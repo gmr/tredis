@@ -1,3 +1,4 @@
+"""Redis String Commands Mixin"""
 from tornado import concurrent
 
 # Python 2 support for ascii()
