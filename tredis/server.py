@@ -9,6 +9,8 @@ if 'ascii' not in dir(__builtins__):  # pragma: nocover
 
 
 class ServerMixin(object):
+    """Redis Server Commands Mixin"""
+
     def auth(self, password):
         """Request for authentication in a password-protected Redis server.
         Redis can be instructed to require a password before allowing clients

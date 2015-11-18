@@ -1,3 +1,4 @@
+"""Redis Key Commands Mixin"""
 from tornado import concurrent
 
 # Python 2 support for ascii()
@@ -277,7 +278,6 @@ class KeysMixin(object):
         if replace is True:
             command.append(b'REPLACE')
         self._execute(command, lambda response: self._is_ok(response, future))
-        print(command)
         return future
 
     def move(self, key, db):

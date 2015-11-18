@@ -1,7 +1,6 @@
-from tornado import concurrent
-
-from tredis import exceptions
+"""Redis Connection Commands Mixin"""
 
 
 class ConnectionMixin(object):
+    """Redis Connection Commands Mixin"""
     pass

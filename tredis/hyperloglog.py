@@ -1,7 +1,6 @@
-from tornado import concurrent
-
-from tredis import exceptions
+"""Redis HyperLogLog Commands Mixin"""
 
 
 class HyperLogLogMixin(object):
+    """Redis HyperLogLog Commands Mixin"""
     pass

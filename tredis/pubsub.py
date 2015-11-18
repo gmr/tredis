@@ -1,7 +1,6 @@
-from tornado import concurrent
-
-from tredis import exceptions
+"""Redis PubSub Commands Mixin"""
 
 
 class PubSubMixin(object):
+    """Redis PubSub Commands Mixin"""
     pass

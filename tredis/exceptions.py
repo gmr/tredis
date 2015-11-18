@@ -1,3 +1,6 @@
+"""TRedis Exceptions"""
+
+
 class RedisError(Exception):
     """Raised as a top-level exception class for all exceptions raised by
     :py:class:`RedisClient <tredis.RedisClient>`. The string representation

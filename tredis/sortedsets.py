@@ -1,7 +1,6 @@
-from tornado import concurrent
-
-from tredis import exceptions
+"""Redis Sorted Set Commands Mixin"""
 
 
 class SortedSetsMixin(object):
+    """Redis Sorted Set Commands Mixin"""
     pass

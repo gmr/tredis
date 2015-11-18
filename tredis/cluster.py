@@ -1,7 +1,6 @@
-from tornado import concurrent
-
-from tredis import exceptions
+"""Redis Cluster Commands Mixin"""
 
 
 class ClusterMixin(object):
+    """Redis Cluster Commands Mixin"""
     pass
