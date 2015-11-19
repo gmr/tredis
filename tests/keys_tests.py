@@ -2,7 +2,6 @@ import mock
 import os
 import time
 import uuid
-import unittest
 
 from tornado import testing
 
@@ -70,8 +69,6 @@ class KeyCommandTests(base.AsyncTestCase):
         result = yield self.client.get(key)
         self.assertEqual(result, value)
 
-    @unittest.skipIf(os.getenv('TRAVIS') == 'true',
-                     'Travis redis container is too old')
     @testing.gen_test
     def test_dump_and_restore_with_replace(self):
         yield self.client.connect()
@@ -566,8 +563,6 @@ class KeyCommandTests(base.AsyncTestCase):
         result = yield self.client.delete(key)
         self.assertTrue(result)
 
-    @unittest.skipIf(os.getenv('TRAVIS') == 'true',
-                     'Travis redis container is too old')
     @testing.gen_test
     def test_wait(self):
         yield self.client.connect()
@@ -648,3 +643,170 @@ class MigrationTests(base.AsyncTestCase):
         self.assertEqual(result, value)
         result = yield self.client.get(key)
         self.assertIsNone(result)
+
+
+class PipelineTests(base.AsyncTestCase):
+
+    def setUp(self):
+        super(PipelineTests, self).setUp()
+        self.redis_host = os.getenv('REDIS_HOST', 'localhost')
+        self.redis2_host = os.getenv('REDIS2_HOST', 'localhost')
+        self.redis2_port = int(os.getenv('REDIS2_PORT', '6379'))
+
+    @testing.gen_test
+    def test_command_pipeline(self):
+        yield self.client.connect()
+        yield self.client.select(9)
+        self.client.pipeline_start()
+
+        expectation = []
+
+        key1, value = self.uuid4(2)
+        self.client.set(key1, value, 10)
+        expectation.append(True)  # 0
+        self.client.exists(key1)
+        expectation.append(True)  # 1
+        self.client.delete(key1)
+        expectation.append(True)  # 2
+        self.client.exists(key1)
+        expectation.append(False)  # 3
+        self.client.set(key1, value, 10)
+        expectation.append(True)  # 4
+        self.client.keys('*')
+        expectation.append([key1])  # 5
+        self.client.type(key1)
+        expectation.append(b'string')  # 6
+
+        key2, value1, value2 = self.uuid4(3)
+
+        self.client.sadd(key2, value1, value2)
+        expectation.append(True)  # 7
+        self.client.object_encoding(key2)
+        expectation.append(b'hashtable')  # 8
+        self.client.object_idle_time(key2)
+        expectation.append(0)  # 9
+        self.client.delete(key2)
+        expectation.append(True)  # 10
+
+        for value in self.uuid4(3):
+            self.client._pipeline_add([b'ZADD', key2, b'1', value])
+            expectation.append(True)  # 11-13
+
+        self.client.object_refcount(key2)
+        expectation.append(1)  # 14
+
+        self.client.delete(key2)
+        expectation.append(True)  # 15
+
+        key3, new1 = self.uuid4(2)
+        self.client.set(key3, value, 10)
+        expectation.append(True)  # 16
+        self.client.rename(key3, new1)
+        expectation.append(True)  # 17
+        self.client.set(key3, value, 10)
+        expectation.append(True)  # 18
+        self.client.renamenx(key3, new1)
+        expectation.append(False)  # 19
+
+        self.client.scan(0, '*')
+        expectation.append((0, sorted([key1, key3, new1])))  # 20
+
+        key4 = self.uuid4()
+        self.client.sadd(key4, 100, 300, 200)
+        expectation.append(True)  # 21
+        self.client.sort(key4)
+        expectation.append([b'100', b'200', b'300'])  # 22
+        self.client.delete(key4)
+        expectation.append(True)  # 23
+
+        key5 = self.uuid4()
+        self.client.set(key5, value, 10)
+        expectation.append(True)  # 24
+        self.client.wait(0, 500)
+        expectation.append(0)  # 25
+
+        result = yield self.client.pipeline_execute()
+        for index, value in enumerate(result):
+            if isinstance(value, list):
+                result[index] = sorted(value)
+            if isinstance(value, tuple) and isinstance(value[1],list):
+                result[index] = value[0], sorted(value[1])
+
+        self.assertListEqual(result, expectation)
+
+    @testing.gen_test
+    def test_dump_and_restore(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value = self.uuid4(2)
+        self.client.set(key, value, 10)
+        self.client.dump(key)
+        self.client.delete(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(result[0])
+        self.assertIn(value, result[1])
+        self.assertTrue(result[2])
+
+        self.client.pipeline_start()
+        self.client.restore(key, 10, result[1])
+        self.client.get(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(result[0])
+        self.assertEqual(result[1], value)
+
+    @testing.gen_test
+    def test_expire_and_ttl(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value = self.uuid4(2)
+        ttl = 5
+        self.client.set(key, value, 10)
+        self.client.expire(key, ttl)
+        self.client.ttl(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue([result[0], result[1]])
+        self.assertAlmostEqual(result[2], ttl)
+
+    @testing.gen_test
+    def test_pttl(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value = self.uuid4(2)
+        self.client.set(key, value, 10)
+        self.client.pexpire(key, 5000)
+        self.client.pttl(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(result[0] and result[1])
+        self.assertGreater(result[2], 1000)
+        self.assertLessEqual(result[2], 5000)
+
+    @testing.gen_test
+    def test_migrate(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value = self.uuid4(2)
+        self.client.set(key, value, 10)
+        self.client.migrate(self.redis2_host, 6379, key, 10, 5000)
+        result = yield self.client.pipeline_execute()
+        self.assertListEqual(result, [True, True])
+
+        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
+        yield client.connect()
+        result = yield client.get(key)
+        self.assertEqual(result, value)
+
+        result = yield self.client.get(key)
+        self.assertIsNone(result)
+
+    @testing.gen_test
+    def test_randomkey(self):
+        yield self.client.connect()
+        yield self.client.select(8)
+        self.client.pipeline_start()
+        keys = self.uuid4(10)
+        for key in list(keys):
+            self.client.set(key, str(uuid.uuid4()), 10)
+        self.client.randomkey()
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(all(result[0:10]))
+        self.assertIn(result[-1], keys)
