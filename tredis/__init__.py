@@ -218,6 +218,8 @@ class RedisClient(
                     pipeline_responses.append(response.result())
 
             if len(pipeline_responses) == commands:
+                self._pipeline = False
+                self._pipeline_commands = []
                 future.set_result(pipeline_responses.values)
             else:
                 self._get_response(on_response)
