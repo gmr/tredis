@@ -296,13 +296,16 @@ class RedisClient(
         self._stream.write(self._build_command(parts), callback=on_written)
         return future
 
-    def _execute_with_bool_response(self, parts):
+    def _execute_and_eval_int_resp(self, parts):
         """Execute a command returning a boolean based upon the response.
 
         :param list parts: The command parts
         :rtype: bool
 
         """
+        if self._pipeline:
+            return self._pipeline_add(parts, self._pipeline_int_is_1)
+
         future = concurrent.TracebackFuture()
 
         def on_response(response):

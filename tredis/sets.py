@@ -34,6 +34,12 @@ class SetsMixin(object):
 
         """
         def _eval_response(value):
+            """Evaluate the response from redis
+
+            :param int value: The number of values added
+            :rtype: int, bool
+
+            """
             if value == len(members):
                 return True
             else:
@@ -265,10 +271,9 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SMOVE', source, destination, member]
-        if self._pipeline:
-            return self._pipeline_add(command, self._pipeline_int_is_1)
-        return self._execute_with_bool_response(command)
+        return self._execute_and_eval_int_resp([
+            b'SMOVE', source, destination, member
+        ])
 
     def spop(self, key, count=None):
         """Removes and returns one or more random elements from the set value
@@ -368,6 +373,12 @@ class SetsMixin(object):
         future = concurrent.TracebackFuture()
 
         def _eval_response(value):
+            """Evaluate the response from redis
+
+            :param int value: The number of values removed
+            :rtype: int, bool
+
+            """
             if value == len(members):
                 return True
             else:
@@ -441,7 +452,13 @@ class SetsMixin(object):
         """
         future = concurrent.TracebackFuture()
 
-        def _eval_response(value):
+        def _format_response(value):
+            """Format the response from redis
+
+            :param tuple value: The return response from redis
+            :rtype: tuple(int, list)
+
+            """
             return int(value[0]), value[1]
 
         def on_response(response):
@@ -455,7 +472,7 @@ class SetsMixin(object):
             if exc:
                 future.set_exception(exc)
             else:
-                future.set_result(_eval_response(response.result()))
+                future.set_result(_format_response(response.result()))
 
         command = [b'SSCAN', key, ascii(cursor).encode('ascii')]
         if pattern:
@@ -464,7 +481,7 @@ class SetsMixin(object):
             command += [b'COUNT', ascii(count).encode('ascii')]
 
         if self._pipeline:
-            return self._pipeline_add(command, _eval_response)
+            return self._pipeline_add(command, _format_response)
 
         self._execute(command, on_response)
         return future
