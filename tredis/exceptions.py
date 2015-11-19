@@ -25,3 +25,11 @@ class AuthError(RedisError):
 
     """
     pass
+
+
+class PipelineError(RedisError):
+    """Raised when a command is executed in non-pipeline mode when pipeline
+    is enabled.
+
+    """
+    pass
