@@ -341,13 +341,15 @@ class PipelineTests(base.AsyncTestCase):
         self.client.sunionstore(key3, key1, key2)
         expectation.append(4)  # 18
 
-        self.client.sscan(key1, 0)
-        expectation.append((0, sorted([val1, val2, val3])))  # 19
+        self.client.sscan(key3, 0)
+        expectation.append((0, sorted([val1, val2, val3, val5])))  # 19
 
         result = yield self.client.pipeline_execute()
         for index, value in enumerate(result):
             if isinstance(value, list):
                 result[index] = sorted(value)
+            if isinstance(value, tuple) and isinstance(value[1],list):
+                result[index] = value[0], sorted(value[1])
 
         self.assertListEqual(result, expectation)
 
