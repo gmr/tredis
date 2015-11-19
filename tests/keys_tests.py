@@ -15,7 +15,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_delete(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -24,7 +23,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_delete_multi(self):
-        yield self.client.connect()
         key1, key2, value = self.uuid4(3)
         result = yield self.expiring_set(key1, value)
         self.assertTrue(result)
@@ -35,7 +33,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_delete_missing_key(self):
-        yield self.client.connect()
         key1, key2, value = self.uuid4(3)
         result = yield self.expiring_set(key1, value)
         self.assertTrue(result)
@@ -47,7 +44,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_delete_with_error(self):
-        yield self.client.connect()
         key = self.uuid4()
         self._execute_result = exceptions.RedisError('Test Exception')
         with mock.patch.object(self.client, '_execute', self._execute):
@@ -56,7 +52,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_dump_and_restore(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -71,7 +66,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_dump_and_restore_with_replace(self):
-        yield self.client.connect()
         key, value1, value2 = self.uuid4(3)
         result = yield self.expiring_set(key, value1)
         self.assertTrue(result)
@@ -90,7 +84,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_dump_and_restore_without_replace(self):
-        yield self.client.connect()
         key, value1, value2 = self.uuid4(3)
         result = yield self.expiring_set(key, value1)
         self.assertTrue(result)
@@ -107,14 +100,12 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_dump_with_invalid_key(self):
-        yield self.client.connect()
         key = self.uuid4()
         result = yield self.client.dump(key)
         self.assertIsNone(result)
 
     @testing.gen_test
     def test_expire_and_ttl(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         ttl = 5
         result = yield self.expiring_set(key, value)
@@ -126,13 +117,11 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_expire_with_error(self):
-        yield self.client.connect()
         with self.assertRaises(exceptions.RedisError):
             yield self.client.expire(self.uuid4(), 'abc')
 
     @testing.gen_test
     def test_expireat_and_ttl(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -146,13 +135,11 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_expireat_with_error(self):
-        yield self.client.connect()
         with self.assertRaises(exceptions.RedisError):
             yield self.client.expireat(self.uuid4(), 'abc')
 
     @testing.gen_test
     def test_exists_single(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -161,23 +148,12 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_exists_none(self):
-        yield self.client.connect()
         key = self.uuid4()
         result = yield self.client.exists(key)
         self.assertFalse(result)
 
     @testing.gen_test
-    def test_exists_error(self):
-        yield self.client.connect()
-        self._execute_result = exceptions.RedisError('Test Exception')
-        with mock.patch.object(self.client, '_execute', self._execute):
-            with self.assertRaises(exceptions.RedisError):
-                result = yield self.client.exists('foo')
-                self.assertFalse(result)
-
-    @testing.gen_test
     def test_keys(self):
-        yield self.client.connect()
         yield self.client.select(3)
         prefix = 'keys-test'
         keys = ['{}-{}'.format(prefix, str(uuid.uuid4())).encode('ascii')
@@ -189,7 +165,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_move(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         response = yield self.client.select(2)
         self.assertTrue(response)
@@ -204,7 +179,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_object_encoding(self):
-        yield self.client.connect()
         key, value1, value2 = self.uuid4(3)
         result = yield self.client.sadd(key, value1, value2)
         self.assertTrue(result)
@@ -215,7 +189,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_object_idle_time(self):
-        yield self.client.connect()
         key, value1, value2 = self.uuid4(3)
         result = yield self.client.sadd(key, value1, value2)
         self.assertTrue(result)
@@ -226,7 +199,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_object_refcount(self):
-        yield self.client.connect()
         key = self.uuid4()
         for value in self.uuid4(3):
             result = yield self.client._execute([b'ZADD', key, b'1', value])
@@ -238,7 +210,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_persist(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -251,7 +222,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_pexpire_and_ttl(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -262,13 +232,11 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_pexpire_with_error(self):
-        yield self.client.connect()
         with self.assertRaises(exceptions.RedisError):
             yield self.client.pexpire(self.uuid4(), 'abc')
 
     @testing.gen_test
     def test_pexpireat_and_ttl(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -281,13 +249,11 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_pexpireat_with_error(self):
-        yield self.client.connect()
         with self.assertRaises(exceptions.RedisError):
             yield self.client.pexpireat(self.uuid4(), 'abc')
 
     @testing.gen_test
     def test_pttl(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -299,7 +265,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_randomkey(self):
-        yield self.client.connect()
         yield self.client.select(4)
         keys = self.uuid4(10)
         for key in list(keys):
@@ -309,7 +274,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_rename(self):
-        yield self.client.connect()
         key1, key2, value = self.uuid4(3)
         result = yield self.expiring_set(key1, value)
         self.assertTrue(result)
@@ -320,7 +284,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_renamenx(self):
-        yield self.client.connect()
         key1, key2, value = self.uuid4(3)
         result = yield self.expiring_set(key1, value)
         self.assertTrue(result)
@@ -335,7 +298,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_renamenx_failure(self):
-        yield self.client.connect()
         key1, key2, value = self.uuid4(3)
         result = yield self.expiring_set(key1, value)
         self.assertTrue(result)
@@ -346,7 +308,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_scan(self):
-        yield self.client.connect()
         yield self.client.select(5)
         key1, key2, key3, value = self.uuid4(4)
         keys = [key1, key2, key3]
@@ -362,7 +323,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_scan_with_pattern(self):
-        yield self.client.connect()
         yield self.client.select(5)
         key1, key2, key3, value = self.uuid4(4)
         keys = [key1, key2, key3]
@@ -378,7 +338,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_scan_with_pattern_and_count(self):
-        yield self.client.connect()
         yield self.client.select(5)
         key1, key2, key3, value = self.uuid4(4)
         keys = [key1, key2, key3]
@@ -394,7 +353,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_scan_with_error(self):
-        yield self.client.connect()
         key = self.uuid4()
         self._execute_result = exceptions.RedisError('Test Exception')
         with mock.patch.object(self.client, '_execute', self._execute):
@@ -403,14 +361,12 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_invalid_order(self):
-        yield self.client.connect()
         key = self.uuid4()
         with self.assertRaises(ValueError):
             yield self.client.sort(key, alpha=True, order='DOWN')
 
     @testing.gen_test
     def test_sort_numeric(self):
-        yield self.client.connect()
         key = self.uuid4()
         result = yield self.client.sadd(key, 100, 300, 200)
         self.assertTrue(result)
@@ -421,7 +377,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_alpha_asc(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
@@ -432,7 +387,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_alpha_desc(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
@@ -444,7 +398,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_alpha_limit_offset(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.sadd(key, value1, value2, value3)
         self.assertTrue(result)
@@ -455,7 +408,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_alpha_asc_and_store(self):
-        yield self.client.connect()
         key1, key2, value1, value2, value3 = self.uuid4(5)
         result = yield self.client.sadd(key1, value1, value2, value3)
         self.assertTrue(result)
@@ -471,7 +423,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_by(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, value1, value2, value3)
@@ -490,7 +441,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_by_with_external(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, value1, value2, value3)
@@ -514,7 +464,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_sort_by_with_externals(self):
-        yield self.client.connect()
         key, value1, value2, value3 = self.uuid4(4)
         values = [value1, value2, value3]
         result = yield self.client.sadd(key, value1, value2, value3)
@@ -545,7 +494,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_type_string(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -554,7 +502,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_type_set(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.client.sadd(key, value)
         self.assertTrue(result)
@@ -565,7 +512,6 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_wait(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -583,15 +529,14 @@ class MigrationTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_migrate(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
         result = yield self.client.migrate(self.redis2_host, 6379, key, 10,
                                            5000)
         self.assertTrue(result)
+
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        yield client.connect()
         result = yield client.get(key)
         self.assertEqual(result, value)
         result = yield self.client.get(key)
@@ -599,7 +544,6 @@ class MigrationTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_migrate_copy(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
@@ -607,7 +551,6 @@ class MigrationTests(base.AsyncTestCase):
                                            5000, copy=True)
         self.assertTrue(result)
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        yield client.connect()
         result = yield client.get(key)
         self.assertEqual(result, value)
         result = yield self.client.get(key)
@@ -615,12 +558,10 @@ class MigrationTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_migrate_exists(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        yield client.connect()
         result = yield client.set(key, value, 10)
         self.assertTrue(result)
         with self.assertRaises(exceptions.RedisError):
@@ -628,12 +569,10 @@ class MigrationTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_migrate_replace(self):
-        yield self.client.connect()
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        yield client.connect()
         result = yield client.set(key, value, 10)
         self.assertTrue(result)
         result = yield self.client.migrate(self.redis2_host, 6379,
@@ -655,7 +594,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_command_pipeline(self):
-        yield self.client.connect()
         yield self.client.select(9)
         self.client.pipeline_start()
 
@@ -741,7 +679,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_dump_and_restore(self):
-        yield self.client.connect()
         self.client.pipeline_start()
         key, value = self.uuid4(2)
         self.client.set(key, value, 10)
@@ -761,7 +698,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_expire_and_ttl(self):
-        yield self.client.connect()
         self.client.pipeline_start()
         key, value = self.uuid4(2)
         ttl = 5
@@ -774,7 +710,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_pttl(self):
-        yield self.client.connect()
         self.client.pipeline_start()
         key, value = self.uuid4(2)
         self.client.set(key, value, 10)
@@ -787,7 +722,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_migrate(self):
-        yield self.client.connect()
         self.client.pipeline_start()
         key, value = self.uuid4(2)
         self.client.set(key, value, 10)
@@ -796,7 +730,6 @@ class PipelineTests(base.AsyncTestCase):
         self.assertListEqual(result, [True, True])
 
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        yield client.connect()
         result = yield client.get(key)
         self.assertEqual(result, value)
 
@@ -805,7 +738,6 @@ class PipelineTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_randomkey(self):
-        yield self.client.connect()
         yield self.client.select(8)
         self.client.pipeline_start()
         keys = self.uuid4(10)

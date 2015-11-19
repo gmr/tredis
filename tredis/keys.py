@@ -101,10 +101,7 @@ class KeysMixin(object):
         :rtype: bytes, None
 
         """
-        command = [b'DUMP', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'DUMP', key])
 
     def exists(self, key):
         """Returns :py:data:`True` if the key exists.
@@ -231,10 +228,7 @@ class KeysMixin(object):
         :type: list
 
         """
-        command = [b'KEYS', pattern]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'KEYS', pattern])
 
     def migrate(self,
                 host,
@@ -279,13 +273,7 @@ class KeysMixin(object):
             command.append(b'COPY')
         if replace is True:
             command.append(b'REPLACE')
-
-        if self._pipeline:
-            return self._pipeline_add(command, self._pipeline_is_ok)
-
-        future = concurrent.TracebackFuture()
-        self._execute(command, lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_and_eval_ok_resp(command)
 
     def move(self, key, db):
         """Move key from the currently selected database (see
@@ -325,10 +313,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'OBJECT', b'ENCODING', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'OBJECT', b'ENCODING', key])
 
     def object_idle_time(self, key):
         """Return the number of seconds since the object stored at the
@@ -346,10 +331,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'OBJECT', b'IDLETIME', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'OBJECT', b'IDLETIME', key])
 
     def object_refcount(self, key):
         """Return the number of references of the value associated with the
@@ -365,10 +347,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'OBJECT', b'REFCOUNT', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'OBJECT', b'REFCOUNT', key])
 
     def persist(self, key):
         """Remove the existing timeout on key, turning the key from volatile
@@ -455,10 +434,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'PTTL', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'PTTL', key])
 
 
     def randomkey(self):
@@ -472,10 +448,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'RANDOMKEY']
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'RANDOMKEY'])
 
     def rename(self, key, new_key):
         """Renames ``key`` to ``new_key``. It returns an error when the source
@@ -499,13 +472,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'RENAME', key, new_key]
-        if self._pipeline:
-            return self._pipeline_add(command, self._pipeline_is_ok)
-
-        future = concurrent.TracebackFuture()
-        self._execute(command, lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_and_eval_ok_resp([b'RENAME', key, new_key])
 
     def renamenx(self, key, new_key):
         """Renames ``key`` to ``new_key`` if ``new_key`` does not yet exist.
@@ -565,11 +532,7 @@ class KeysMixin(object):
         command = [b'RESTORE', key, ascii(ttl).encode('ascii'), value]
         if replace:
             command.append(b'REPLACE')
-        if self._pipeline:
-            return self._pipeline_add(command, self._pipeline_is_ok)
-        future = concurrent.TracebackFuture()
-        self._execute(command, lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_and_eval_ok_resp(command)
 
     def scan(self, cursor=0, pattern=None, count=None):
         """The :py:class:`scan <tredis.RedisClient.scan>` command and the
@@ -719,8 +682,6 @@ class KeysMixin(object):
         if store_as:
             command += [b'STORE', store_as]
 
-        if self._pipeline:
-            return self._pipeline_add(command)
         return self._execute(command)
 
     def ttl(self, key):
@@ -738,10 +699,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'TTL', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'TTL', key])
 
     def type(self, key):
         """Returns the string representation of the type of the value stored at
@@ -758,10 +716,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'TYPE', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'TYPE', key])
 
     def wait(self, num_slaves, timeout=0):
         """his command blocks the current client until all the previous write
@@ -787,6 +742,4 @@ class KeysMixin(object):
         """
         command = [b'WAIT', ascii(num_slaves).encode('ascii'),
                    ascii(timeout).encode('ascii')]
-        if self._pipeline:
-            return self._pipeline_add(command)
         return self._execute(command)

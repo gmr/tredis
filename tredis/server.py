@@ -84,9 +84,7 @@ class ServerMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-        return self._execute([b'QUIT'],
-                             lambda response: self._is_ok(response, future))
+        return self._execute_and_eval_ok_resp([b'QUIT'])
 
     def select(self, index=0):
         """Select the DB with having the specified zero-based numeric index.
@@ -97,7 +95,5 @@ class ServerMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
-        self._execute([b'SELECT', ascii(index).encode('ascii')],
-                      lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_and_eval_ok_resp([b'SELECT',
+                                               ascii(index).encode('ascii')])

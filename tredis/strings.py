@@ -25,10 +25,7 @@ class StringsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'GET', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'GET', key])
 
     def incr(self, key):
         """Increments the number stored at key by one. If the key does not
@@ -55,10 +52,7 @@ class StringsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'INCR', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'INCR', key])
 
     def set(self, key, value, ex=None, px=None, nx=False, xx=False):
         """Set key to hold the string value. If key already holds a value, it
@@ -95,8 +89,4 @@ class StringsMixin(object):
             command.append(b'NX')
         if xx:
             command.append(b'XX')
-        if self._pipeline:
-            return self._pipeline_add(command, self._pipeline_is_ok)
-        future = concurrent.TracebackFuture()
-        self._execute(command, lambda response: self._is_ok(response, future))
-        return future
+        return self._execute_and_eval_ok_resp(command)

@@ -33,6 +33,8 @@ class SetsMixin(object):
         :rtype: bool, int
 
         """
+        command = [b'SADD', key] + list(members)
+
         def _eval_response(value):
             """Evaluate the response from redis
 
@@ -44,8 +46,6 @@ class SetsMixin(object):
                 return True
             else:
                 return value
-
-        command = [b'SADD', key] + list(members)
 
         if self._pipeline:
             return self._pipeline_add(command, _eval_response)
@@ -82,10 +82,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SCARD', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SCARD', key])
 
     def sdiff(self, *keys):
         """Returns the members of the set resulting from the difference between
@@ -113,10 +110,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SDIFF'] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SDIFF'] + list(keys))
 
     def sdiffstore(self, destination, *keys):
         """This command is equal to
@@ -138,10 +132,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SDIFFSTORE', destination] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SDIFFSTORE', destination] + list(keys))
 
     def sinter(self, *keys):
         """Returns the members of the set resulting from the intersection of
@@ -171,10 +162,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SINTER'] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SINTER'] + list(keys))
 
     def sinterstore(self, destination, *keys):
         """This command is equal to
@@ -196,10 +184,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SINTERSTORE', destination] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SINTERSTORE', destination] + list(keys))
 
     def sismember(self, key, member):
         """Returns :py:data:`True` if ``member`` is a member of the set stored
@@ -217,10 +202,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SISMEMBER', key, member]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute_and_eval_int_resp([b'SISMEMBER', key, member])
 
     def smembers(self, key):
         """Returns all the members of the set value stored at key.
@@ -238,10 +220,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SMEMBERS', key]
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SMEMBERS', key])
 
     def smove(self, source, destination, member):
         """Move member from the set at source to the set at destination. This
@@ -306,8 +285,6 @@ class SetsMixin(object):
         command = [b'SPOP', key]
         if count:  # pragma: nocover
             command.append(ascii(count).encode('ascii'))
-        if self._pipeline:
-            return self._pipeline_add(command)
         return self._execute(command)
 
     def srandmember(self, key, count=None):
@@ -343,8 +320,6 @@ class SetsMixin(object):
         command = [b'SRANDMEMBER', key]
         if count:
             command.append(ascii(count).encode('ascii'))
-        if self._pipeline:
-            return self._pipeline_add(command)
         return self._execute(command)
 
     def srem(self, key, *members):
@@ -370,7 +345,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
+        command = [b'SREM', key] + list(members)
 
         def _eval_response(value):
             """Evaluate the response from redis
@@ -383,6 +358,11 @@ class SetsMixin(object):
                 return True
             else:
                 return value
+
+        if self._pipeline:
+            return self._pipeline_add(command, _eval_response)
+
+        future = concurrent.TracebackFuture()
 
         def on_response(response):
             """Process the redis response
@@ -397,9 +377,6 @@ class SetsMixin(object):
             else:
                 future.set_result(_eval_response(response.result()))
 
-        command = [b'SREM', key] + list(members)
-        if self._pipeline:
-            return self._pipeline_add(command, _eval_response)
         self._execute(command, on_response)
         return future
 
@@ -450,7 +427,11 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        future = concurrent.TracebackFuture()
+        command = [b'SSCAN', key, ascii(cursor).encode('ascii')]
+        if pattern:
+            command += [b'MATCH', pattern]
+        if count:
+            command += [b'COUNT', ascii(count).encode('ascii')]
 
         def _format_response(value):
             """Format the response from redis
@@ -460,6 +441,11 @@ class SetsMixin(object):
 
             """
             return int(value[0]), value[1]
+
+        if self._pipeline:
+            return self._pipeline_add(command, _format_response)
+
+        future = concurrent.TracebackFuture()
 
         def on_response(response):
             """Process the redis response
@@ -473,15 +459,6 @@ class SetsMixin(object):
                 future.set_exception(exc)
             else:
                 future.set_result(_format_response(response.result()))
-
-        command = [b'SSCAN', key, ascii(cursor).encode('ascii')]
-        if pattern:
-            command += [b'MATCH', pattern]
-        if count:
-            command += [b'COUNT', ascii(count).encode('ascii')]
-
-        if self._pipeline:
-            return self._pipeline_add(command, _format_response)
 
         self._execute(command, on_response)
         return future
@@ -512,10 +489,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SUNION'] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SUNION'] + list(keys))
 
     def sunionstore(self, destination, *keys):
         """This command is equal to
@@ -537,7 +511,4 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SUNIONSTORE', destination] + list(keys)
-        if self._pipeline:
-            return self._pipeline_add(command)
-        return self._execute(command)
+        return self._execute([b'SUNIONSTORE', destination] + list(keys))
