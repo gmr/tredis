@@ -277,3 +277,103 @@ class SetTests(base.AsyncTestCase):
         self.assertTrue(result)
         result = yield self.client.sismember(key3, value3)
         self.assertTrue(result)
+
+
+class PipelineTests(base.AsyncTestCase):
+
+    @testing.gen_test
+    def test_command_pipeline(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+
+        expectation = []
+
+        key1, key2, key3, key4, val1, val2, val3, val4, val5 = self.uuid4(9)
+        self.client.sadd(key1, val1, val2, val3)
+        expectation.append(True)  # 0
+        self.client.sadd(key2, val3, val4, val5)
+        expectation.append(True)  # 1
+
+        self.client.scard(key1)
+        expectation.append(3)  # 2
+
+        self.client.sdiff(key1, key2)
+        expectation.append(sorted([val1, val2]))  # 3
+
+        self.client.sdiffstore(key3, key1, key2)
+        expectation.append(2)  # 4
+        self.client.smembers(key3)
+        expectation.append(sorted([val1, val2]))  # 5
+
+        self.client.sadd(key4, val1, val2, val2)
+        expectation.append(2)  # 6
+
+        self.client.sinter(key1, key2)
+        expectation.append(sorted([val3]))  # 7
+
+        self.client.sinterstore(key3, key1, key2)
+        expectation.append(1)  # 8
+        self.client.smembers(key3)
+        expectation.append(sorted([val3]))  # 9
+        self.client.sismember(key3, val3)
+        expectation.append(True)  # 10
+
+        self.client.smove(key2, key1, val4)
+        expectation.append(True)  # 11
+        self.client.sismember(key1, val4)
+        expectation.append(True)  # 12
+
+        self.client.srem(key1, val4)
+        expectation.append(True)  # 13
+        self.client.sismember(key1, val4)
+        expectation.append(False)  # 14
+
+        self.client.smembers(key1)
+        expectation.append(sorted([val1, val2, val3]))  # 15
+        print(val1,val2,val3)
+
+        self.client.smembers(key2)
+        expectation.append(sorted([val3, val5]))  # 16
+
+        self.client.sunion(key1, key2)
+        expectation.append(sorted([val1, val2, val3, val5]))  # 17
+
+        self.client.sunionstore(key3, key1, key2)
+        expectation.append(4)  # 18
+
+        self.client.sscan(key1, 0)
+        expectation.append((0, sorted([val1, val2, val3])))  # 19
+
+        result = yield self.client.pipeline_execute()
+        for index, value in enumerate(result):
+            if isinstance(value, list):
+                result[index] = sorted(value)
+
+        self.assertListEqual(result, expectation)
+
+    @testing.gen_test
+    def test_pipeline_with_spop(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value1, value2, value3 = self.uuid4(4)
+        values = [value1, value2, value3]
+        self.client.sadd(key, *values)
+        self.client.spop(key)
+        self.client.smembers(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(result[0])
+        member, members = result[1], result[2]
+        self.assertIn(member, values)
+        self.assertNotIn(member, members)
+
+    @testing.gen_test
+    def test_pipeline_with_srandom(self):
+        yield self.client.connect()
+        self.client.pipeline_start()
+        key, value1, value2, value3 = self.uuid4(4)
+        values = [value1, value2, value3]
+        self.client.sadd(key, *values)
+        self.client.srandmember(key)
+        result = yield self.client.pipeline_execute()
+        self.assertTrue(result[0])
+        self.assertIn(result[1], values)
