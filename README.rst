@@ -4,6 +4,8 @@ An asynchronous Redis client for Tornado
 
 |Version| |Downloads| |Status| |Coverage| |CodeClimate| |PythonVersions|
 
+Documentation is available at `tredis.readthedocs.org <http://tredis.readthedocs.org_>`_.
+
 Commands Implemented
 --------------------
 TRedis is a work in progress and not all commands are implemented. The following
@@ -56,6 +58,37 @@ Example
 
    yield client.set('foo', 'bar')
    value = yield client.get('foo')
+
+Pipelining
+----------
+tredis supports pipelining in a different way than other redis clients. To use
+pipelining, simply call the ``tredis.RedisClient.pipeline_start()`` method,
+then invoke all of the normal commands without yielding to them. When you have
+created the pipeline, execute it with ``tredis.RedisClient.pipeline_execute()``:
+
+.. code:: python
+
+   client = tredis.RedisClient()
+   yield client.connect()
+
+   # Start the pipeline
+   client.pipeline_start()
+
+   client.set('foo1', 'bar1')
+   client.set('foo2', 'bar2')
+   client.set('foo3', 'bar3')
+   client.get('foo1')
+   client.get('foo2')
+   client.get('foo3')
+   client.incr('foo4')
+   client.incr('foo4')
+   client.get('foo4')
+
+   # Execute the pipeline
+   responses = yield client.pipeline_execute()
+
+   # The expected responses should match this list
+   assert responses == [True, True, True, b'bar1', b'bar2', b'bar3', 1, 2, b'2']
 
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis
