@@ -725,12 +725,17 @@ class PipelineTests(base.AsyncTestCase):
         self.client.wait(0, 500)
         expectation.append(0)  # 25
 
+        self.client.expire(key5, 'abc')
+        expectation.append(exceptions.RedisError)  # 26
+
         result = yield self.client.pipeline_execute()
         for index, value in enumerate(result):
             if isinstance(value, list):
                 result[index] = sorted(value)
-            if isinstance(value, tuple) and isinstance(value[1],list):
+            elif isinstance(value, tuple) and isinstance(value[1],list):
                 result[index] = value[0], sorted(value[1])
+            elif isinstance(value, exceptions.RedisError):
+                result[index] = exceptions.RedisError
 
         self.assertListEqual(result, expectation)
 
