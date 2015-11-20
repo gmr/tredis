@@ -19,6 +19,18 @@ ADDR_PATTERN = re.compile(r'(addr=([\.\d:]+))')
 
 class ConnectTests(base.AsyncTestCase):
 
+    @gen.coroutine
+    def _kill_client(self, client):
+        results = yield client._execute([b'CLIENT', b'LIST'])
+        matches = ADDR_PATTERN.findall(results.decode('ascii'))
+        print(len(matches))
+        value = None
+        for match, addr in matches:
+            value = addr
+        self.assertIsNotNone(value, 'Could not find client')
+        yield client._execute([b'CLIENT', b'KILL', value.encode('ascii')])
+        raise gen.Return(True)
+
     @testing.gen_test
     def test_bad_connect_raises_exception(self):
         client = tredis.RedisClient(str(uuid.uuid4()))
@@ -48,13 +60,15 @@ class ConnectTests(base.AsyncTestCase):
                                     on_close)
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)
-        results = yield client._execute([b'CLIENT', b'LIST'])
-        matches = ADDR_PATTERN.findall(results.decode('ascii'))
-        print(len(matches))
-        value = None
-        for match, addr in matches:
-            value = addr
-        self.assertIsNotNone(value, 'Could not find client')
-        yield client._execute([b'CLIENT', b'KILL', value.encode('ascii')])
-        yield gen.sleep(0.1)  # IOLoop needs ot process for assertion
+        result = yield self._kill_client(client)
+        self.assertTrue(result)
         on_close.assert_called_once_with()
+
+    @testing.gen_test
+    def test_connection_error_raised_on_write_post_kill(self):
+        result = yield self.client.set('foo', 'bar', 10)
+        self.assertTrue(result)
+        result = yield self._kill_client(self.client)
+        self.assertTrue(result)
+        with self.assertRaises(exceptions.ConnectionError):
+            yield self.client.get('foo')
