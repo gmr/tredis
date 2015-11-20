@@ -66,12 +66,14 @@ class RedisClient(server.ServerMixin,
                   transactions.TransactionsMixin,
                   object):
     """A simple asynchronous Redis client with a subset of overall Redis
-    functionality.
+    functionality. The client will automatically connect the first time you
+    issue a command to the Redis server. The following example demonstrates
+    how to set a key in Redis and then retrieve it.
 
-    .. code:: python
+    .. code-block:: python
+       :caption: Simple Example
 
         client = tredis.RedisClient()
-        yield client.connect()
 
         yield client.strings.set('foo', 'bar')
         value = yield client.strings.get('foo')
@@ -105,27 +107,35 @@ class RedisClient(server.ServerMixin,
 
     def close(self):
         """Close the Redis server connection"""
-        print('Close', self._stream, self._client)
         if self._stream:
             self._stream.close()
 
     def pipeline_start(self):
         """Start a command pipeline. The pipeline will only run when you invoke
-        :py:meth:`pipeline_execute <tredis.RedisClient.pipeline_execute`.
+        :py:meth:`pipeline_execute <tredis.RedisClient.pipeline_execute>`.
 
-        **Example:**
+        .. code-block:: python
+           :caption: Pipeline Example
 
-        .. code::
+           # Start the pipeline
+           client.pipeline_start()
 
-            # Start the pipeline
-            client.pipeline_start()
+           client.set('foo1', 'bar1')
+           client.set('foo2', 'bar2')
+           client.set('foo3', 'bar3')
 
-            client.set('foo1', 'bar1')
-            client.set('foo2', 'bar2')
-            client.set('foo3', 'bar3')
+           # Execute the pipeline
+           responses = yield client.pipeline_execute()
 
-            # Execute the pipeline
-            responses = yield client.pipeline_execute()
+        .. warning:: Yielding after calling
+           :py:meth:`pipeline_start <tredis.RedisClient.pipeline_start>` and
+           before calling
+           :py:meth:`pipeline_execute <tredis.RedisClient.pipeline_execute>`
+           can cause asynchronous request scope issues, as the client does not
+           protect against other asynchronous requests from populating the
+           pipeline. The only way to prevent this from happening is to make
+           all pipeline additions inline without yielding to the
+           :py:class:`IOLoop <tornado.ioloop.IOLoop>`.
 
         .. note:: While the client sends commands using pipelining, the server
            will be forced to queue the replies, using memory. So if you need

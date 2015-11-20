@@ -22,4 +22,4 @@ intersphinx_mapping = {'tornado': ('http://www.tornadoweb.org/en/stable/', None)
                        'python': ('https://docs.python.org/3/', None)}
 
 html_static_path = ['_static']
-autodoc_member_order = 'bysource'
+#autodoc_member_order = 'bysource'

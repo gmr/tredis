@@ -1,8 +1,12 @@
 Exceptions
 ==========
 
-.. autoclass:: tredis.exceptions.RedisError
+.. autoclass:: tredis.exceptions.TRedisException
 
 .. autoclass:: tredis.exceptions.ConnectError
 
+.. autoclass:: tredis.exceptions.ConnectionError
+
 .. autoclass:: tredis.exceptions.AuthError
+
+.. autoclass:: tredis.exceptions.RedisError

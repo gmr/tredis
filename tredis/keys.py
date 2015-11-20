@@ -188,7 +188,8 @@ class KeysMixin(object):
 
         :param pattern: The pattern to use when looking for keys
         :type pattern: str, bytes
-        :type: list
+        :rtype: list
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         return self._execute([b'KEYS', pattern])
@@ -214,19 +215,20 @@ class KeysMixin(object):
 
            **Time complexity**: This command actually executes a DUMP+DEL in
            the source instance, and a RESTORE in the target instance. See the
-           pages of these commands for time complexity. Also an O(N) data
+           pages of these commands for time complexity. Also an ``O(N)`` data
            transfer between the two instances is performed.
 
         :param host: The host to migrate the key to
         :type host: bytes, str
-        :param port: The port to connect on
-        :param key:The key to migrate
+        :param int port: The port to connect on
+        :param key: The key to migrate
         :type key: bytes, str
         :param int destination_db: The database number to select
         :param int timeout: The maximum idle time in milliseconds
         :param bool copy: Do not remove the key from the local instance
         :param bool replace: Replace existing key on the remote instance
-        :raises: NotImplementedError
+        :rtype: bool
+        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
         command = [b'MIGRATE', host, ascii(port).encode('ascii'), key,

@@ -54,7 +54,6 @@ Example
 .. code:: python
 
    client = tredis.RedisClient()
-   yield client.connect()
 
    yield client.set('foo', 'bar')
    value = yield client.get('foo')
@@ -69,7 +68,6 @@ created the pipeline, execute it with ``tredis.RedisClient.pipeline_execute()``:
 .. code:: python
 
    client = tredis.RedisClient()
-   yield client.connect()
 
    # Start the pipeline
    client.pipeline_start()
@@ -89,6 +87,12 @@ created the pipeline, execute it with ``tredis.RedisClient.pipeline_execute()``:
 
    # The expected responses should match this list
    assert responses == [True, True, True, b'bar1', b'bar2', b'bar3', 1, 2, b'2']
+
+.. warning:: Yielding after calling ``RedisClient.pipeline_start()`` and before
+ calling ``yield RedisClient.pipeline_execute()`` can cause asynchronous request
+ scope issues, as the client does not protect against other asynchronous requests
+ from populating the pipeline. The only way to prevent this from happening is
+ to make all pipeline additions inline without yielding to the ``IOLoop``.
 
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis

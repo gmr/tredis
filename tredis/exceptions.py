@@ -2,9 +2,7 @@
 
 class TRedisException(Exception):
     """Raised as a top-level exception class for all exceptions raised by
-    :py:class:`RedisClient <tredis.RedisClient>`. The string representation
-    of this class will contain the error resposne from the Redis server,
-    if one is sent.
+    :py:class:`RedisClient <tredis.RedisClient>`.
 
     """
     pass
@@ -35,9 +33,9 @@ class AuthError(TRedisException):
 
 
 class RedisError(TRedisException):
-    """Raised as a top-level exception class for all exceptions raised by
+    """Raised when the Redis server returns a error to
     :py:class:`RedisClient <tredis.RedisClient>`. The string representation
-    of this class will contain the error resposne from the Redis server,
+    of this class will contain the error response from the Redis server,
     if one is sent.
 
     """

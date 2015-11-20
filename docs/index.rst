@@ -4,15 +4,33 @@ An asynchronous Redis client for Tornado
 
 |Version| |Downloads| |License| |PythonVersions|
 
-Contents:
+.. note:: ``TRedis`` is a work in progress and does not support the entire Redis
+   command set. For a list of the currently supported commands by category, see
+   the :doc:`supported-commands` documentation.
+
+Installation
+------------
+tredis is available from the `Python Package Index <https://preview-pypi.python.org/project/tredis/>`_ and can be installed by running :command:`pip install tredis`
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
    api
    exceptions
+   supported-commands
    example
    history
+
+Issues
+------
+Please report any issues to the Github repo at `https://github.com/gmr/tredis/issues <https://github.com/gmr/tredis/issues>`_
+
+Source
+------
+TRedis source is available on Github at `https://github.com/gmr/tredis <https://github.com/gmr/tredis>`_
 
 Indices and tables
 ==================
