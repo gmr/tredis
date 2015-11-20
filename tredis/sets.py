@@ -16,7 +16,7 @@ class SetsMixin(object):
 
         An error is returned when the value stored at key is not a set.
 
-        Returns :py:data:`True` if all requested members are added. If more
+        Returns :data:`True` if all requested members are added. If more
         than one member is passed in and not all members are added, the
         number of added members is returned.
 
@@ -26,9 +26,9 @@ class SetsMixin(object):
            to be added.
 
         :param key: The key of the set
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param members: One or more positional arguments to add to the set
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :returns: Number of items added to the set
         :rtype: bool, int
 
@@ -44,9 +44,9 @@ class SetsMixin(object):
            **Time complexity**: ``O(1)``
 
         :param key: The key of the set
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :rtype: int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SCARD', key])
@@ -72,17 +72,16 @@ class SetsMixin(object):
            elements in all given sets.
 
         :param keys: Two or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SDIFF'] + list(keys))
 
     def sdiffstore(self, destination, *keys):
-        """This command is equal to
-        :py:class:`sdiff <tredis.RedisClient.sdiff>`, but instead of
-        returning the resulting set, it is stored in destination.
+        """This command is equal to :meth:`~tredis.RedisClient.sdiff`, but
+        instead of returning the resulting set, it is stored in destination.
 
         If destination already exists, it is overwritten.
 
@@ -92,11 +91,11 @@ class SetsMixin(object):
            elements in all given sets.
 
         :param destination: The set to store the diff into
-        :type destination: str, bytes
+        :type destination: :class:`str`, :class:`bytes`
         :param keys: One or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SDIFFSTORE', destination] + list(keys))
@@ -124,17 +123,16 @@ class SetsMixin(object):
            cardinality of the smallest set and ``M`` is the number of sets.
 
         :param keys: Two or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SINTER'] + list(keys))
 
     def sinterstore(self, destination, *keys):
-        """This command is equal to
-        :py:class:`sinter <tredis.RedisClient.sinter>`, but instead of
-        returning the resulting set, it is stored in destination.
+        """This command is equal to :meth:`~tredis.RedisClient.sinter`, but
+        instead of returning the resulting set, it is stored in destination.
 
         If destination already exists, it is overwritten.
 
@@ -144,17 +142,17 @@ class SetsMixin(object):
            cardinality of the smallest set and ``M`` is the number of sets.
 
         :param destination: The set to store the intersection into
-        :type destination: str, bytes
+        :type destination: :class:`str`, :class:`bytes`
         :param keys: One or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SINTERSTORE', destination] + list(keys))
 
     def sismember(self, key, member):
-        """Returns :py:data:`True` if ``member`` is a member of the set stored
+        """Returns :data:`True` if ``member`` is a member of the set stored
         at key.
 
         .. note::
@@ -162,11 +160,11 @@ class SetsMixin(object):
            **Time complexity**: ``O(1)``
 
         :param key: The key of the set to check for membership in
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param member: The value to check for set membership with
-        :type member: str, bytes
+        :type member: :class:`str`, :class:`bytes`
         :rtype: bool
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SISMEMBER', key, member], 1)
@@ -174,17 +172,17 @@ class SetsMixin(object):
     def smembers(self, key):
         """Returns all the members of the set value stored at key.
 
-        This has the same effect as running
-        :py:class:`sinter <tredis.RedisClient.sinter>` with one argument key.
+        This has the same effect as running :meth:`~tredis.RedisClient.sinter`
+        with one argument key.
 
         .. note::
 
            **Time complexity**: ``O(N)`` where ``N`` is the set cardinality.
 
         :param key: The key of the set to return the members from
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :rtype: list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SMEMBERS', key])
@@ -195,7 +193,7 @@ class SetsMixin(object):
         be a member of source or destination for other clients.
 
         If the source set does not exist or does not contain the specified
-        element, no operation is performed and :py:data:`False` is returned.
+        element, no operation is performed and :data:`False` is returned.
         Otherwise, the element is removed from the source set and added to the
         destination set. When the specified element already exists in the
         destination set, it is only removed from the source set.
@@ -208,13 +206,13 @@ class SetsMixin(object):
            **Time complexity**: ``O(1)``
 
         :param source: The source set key
-        :type source: str, bytes
+        :type source: :class:`str`, :class:`bytes`
         :param destination: The destination set key
-        :type destination: str, bytes
+        :type destination: :class:`str`, :class:`bytes`
         :param member: The member value to move
-        :type member: str, bytes
+        :type member: :class:`str`, :class:`bytes`
         :rtype: bool
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SMOVE', source, destination, member], 1)
@@ -223,17 +221,17 @@ class SetsMixin(object):
         """Removes and returns one or more random elements from the set value
         store at key.
 
-        This operation is similar to
-        :py:class:`srandmember <tredis.RedisClient.srandmember>`, that returns
-        one or more random elements from a set but does not remove it.
+        This operation is similar to :meth:`~tredis.RedisClient.srandmember`,
+        that returns one or more random elements from a set but does not remove
+        it.
 
         The count argument will be available in a later version and is not
         available in 2.6, 2.8, 3.0
 
         Redis 3.2 will be the first version where an optional count argument
-        can be passed to :py:class:`spop <tredis.RedisClient.spop>` in order
-        to retrieve multiple elements in a single call. The implementation is
-        already available in the unstable branch.
+        can be passed to :meth:`~tredis.RedisClient.spop` in order to retrieve
+        multiple elements in a single call. The implementation is already
+        available in the unstable branch.
 
         .. note::
 
@@ -241,10 +239,10 @@ class SetsMixin(object):
            ``O(N)`` where ``N`` is the absolute value of the passed count.
 
         :param key: The key to get one or more random members from
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param int count: The number of members to return
         :rtype: bytes, list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         command = [b'SPOP', key]
@@ -264,10 +262,9 @@ class SetsMixin(object):
         specified count.
 
         When called with just the key argument, the operation is similar to
-        :py:class:`spop <tredis.RedisClient.spop>`, however while
-        :py:class:`spop <tredis.RedisClient.spop>` also removes the randomly
-        selected element from the set,
-        :py:class:`srandmember <tredis.RedisClient.srandmember>` will just
+        :meth:`~tredis.RedisClient.spop`, however while
+        :meth:`~tredis.RedisClient.spop` also removes the randomly selected
+        element from the set, :meth:`~tredis.RedisClient.srandmember` will just
         return a random element without altering the original set in any way.
 
         .. note::
@@ -276,10 +273,10 @@ class SetsMixin(object):
            ``O(N)`` where ``N`` is the absolute value of the passed count.
 
         :param key: The key to get one or more random members from
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param int count: The number of members to return
         :rtype: bytes, list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         command = [b'SRANDMEMBER', key]
@@ -294,7 +291,7 @@ class SetsMixin(object):
 
         An error is returned when the value stored at key is not a set.
 
-        Returns :py:data:`True` if all requested members are removed. If more
+        Returns :data:`True` if all requested members are removed. If more
         than one member is passed in and not all members are removed, the
         number of removed members is returned.
 
@@ -304,41 +301,40 @@ class SetsMixin(object):
            to be removed.
 
         :param key: The key to remove the member from
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param mixed members: One or more member values to remove
         :rtype: bool, int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SREM', key] + list(members), len(members))
 
     def sscan(self, key, cursor=0, pattern=None, count=None):
-        """The :py:class:`sscan <tredis.RedisClient.sscan>` command and the
-        closely related commands :py:class:`scan <tredis.RedisClient.scan>`,
-        :py:class:`hscan <tredis.RedisClient.hscan>` and
-        :py:class:`zscan <tredis.RedisClient.zscan>` are used in order to
-        incrementally iterate over a collection of elements.
+        """The :meth:`~tredis.RedisClient.sscan` command and the closely
+        related commands :meth:`~tredis.RedisClient.scan`,
+        :meth:`~tredis.RedisClient.hscan` and :meth:`~tredis.RedisClient.zscan`
+        are used in order to incrementally iterate over a collection of
+        elements.
 
-        - :py:class:`scan <tredis.RedisClient.scan>` iterates the set of keys
-          in the currently selected Redis database.
-        - :py:class:`sscan <tredis.RedisClient.sscan>` iterates elements of
-          Sets types.
-        - :py:class:`hscan <tredis.RedisClient.hscan>` iterates fields of Hash
-          types and their associated values.
-        - :py:class:`zscan <tredis.RedisClient.zscan>` iterates elements of
-          Sorted Set types and their associated scores.
+        - :meth:`~tredis.RedisClient.scan` iterates the set of keys in the
+          currently selected Redis database.
+        - :meth:`~tredis.RedisClient.sscan` iterates elements of Sets types.
+        - :meth:`~tredis.RedisClient.hscan` iterates fields of Hash types and
+          their associated values.
+        - :meth:`~tredis.RedisClient.zscan` iterates elements of Sorted Set
+          types and their associated scores.
 
         **Basic usage**
 
-        :py:class:`sscan <tredis.RedisClient.sscan>` is a cursor based
-        iterator. This means that at every call of the command, the server
-        returns an updated cursor that the user needs to use as the cursor
-        argument in the next call.
+        :meth:`~tredis.RedisClient.sscan` is a cursor based iterator. This
+        means that at every call of the command, the server returns an updated
+        cursor that the user needs to use as the cursor argument in the next
+        call.
 
         An iteration starts when the cursor is set to ``0``, and terminates
         when the cursor returned by the server is ``0``.
 
-        For more information on :py:class:`scan <tredis.RedisClient.scan>`,
+        For more information on :meth:`~tredis.RedisClient.scan`,
         visit the `Redis docs on scan <http://redis.io/commands/scan>`_.
 
         .. note::
@@ -349,14 +345,14 @@ class SetsMixin(object):
            collection.
 
         :param key: The key to scan
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param int cursor: The server specified cursor value or ``0``
         :param pattern: An optional pattern to apply for key matching
-        :type pattern: str, bytes
+        :type pattern: :class:`str`, :class:`bytes`
         :param int count: An optional amount of work to perform in the scan
         :rtype: int, list
         :returns: A tuple containing the cursor and the list of set items
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
 
@@ -397,17 +393,16 @@ class SetsMixin(object):
         Keys that do not exist are considered to be empty sets.
 
         :param keys: Two or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: list
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SUNION'] + list(keys))
 
     def sunionstore(self, destination, *keys):
-        """This command is equal to
-        :py:meth:`sunion <tredis.RedisClient.sunion>`, but instead of returning
-        the resulting set, it is stored in destination.
+        """This command is equal to :meth:`~tredis.RedisClient.sunion`, but
+        instead of returning the resulting set, it is stored in destination.
 
         If destination already exists, it is overwritten.
 
@@ -417,11 +412,11 @@ class SetsMixin(object):
            elements in all given sets.
 
         :param destination: The set to store the union into
-        :type destination: str, bytes
+        :type destination: :class:`str`, :class:`bytes`
         :param keys: One or more set keys as positional arguments
-        :type keys: str, bytes
+        :type keys: :class:`str`, :class:`bytes`
         :rtype: int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SUNIONSTORE', destination] + list(keys))

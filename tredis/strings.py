@@ -11,18 +11,18 @@ class StringsMixin(object):
 
     def get(self, key):
         """Get the value of key. If the key does not exist the special value
-        :py:data:`None` is returned. An error is returned if the value stored
-        at key is not a string, because :py:meth:`get <tredis.RedisClient.get>`
-        only handles string values.
+        :data:`None` is returned. An error is returned if the value stored
+        at key is not a string, because :meth:`~tredis.RedisClient.get` only
+        handles string values.
 
         .. note::
 
            **Time complexity**: ``O(1)``
 
         :param key: The key to get
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :rtype: bytes|None
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'GET', key])
@@ -47,9 +47,9 @@ class StringsMixin(object):
            **Time complexity**: ``O(1)``
 
         :param key: The key to increment
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :rtype: int
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'INCR', key])
@@ -58,26 +58,26 @@ class StringsMixin(object):
         """Set key to hold the string value. If key already holds a value, it
         is overwritten, regardless of its type. Any previous time to live
         associated with the key is discarded on successful
-        :py:meth:`set <tredis.RedisClient.set>` operation.
+        :meth:`~tredis.RedisClient.set` operation.
 
-        If the value is not one of :py:class:`str`, :py:class:`bytes`, or
-        :py:class:`int`, a :py:exc:`ValueError` will be raised.
+        If the value is not one of :class:`str`, :class:`bytes`, or
+        :class:`int`, a :exc:`ValueError` will be raised.
 
         .. note::
 
            **Time complexity**: ``O(1)``
 
         :param key: The key to remove
-        :type key: str, bytes
+        :type key: :class:`str`, :class:`bytes`
         :param value: The value to set
-        :type value: str, bytes, int
+        :type value: :class:`str`, :class:`bytes`, :class:`int`
         :param int ex: Set the specified expire time, in seconds
         :param int px: Set the specified expire time, in milliseconds
         :param bool nx: Only set the key if it does not already exist
         :param bool xx: Only set the key if it already exist
         :rtype: bool
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
-        :raises: :py:exc:`ValueError`
+        :raises: :exc:`~tredis.exceptions.RedisError`
+        :raises: :exc:`ValueError`
 
         """
         command = [b'SET', key, value]

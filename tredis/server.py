@@ -18,14 +18,14 @@ class ServerMixin(object):
         in the configuration file.
 
         If the password does not match, an
-        :py:exc:`AuthError <tredis.exceptions.AuthError>` exception
+        :exc:`~tredis.exceptions.AuthError` exception
         will be raised.
 
         :param password: The password to authenticate with
-        :type password: str, bytes
+        :type password: :class:`str`, :class:`bytes`
         :rtype: bool
-        :raises: :py:exc:`AuthError <tredis.exceptions.AuthError>`
-                 :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.AuthError`,
+                 :exc:`~tredis.exceptions.RedisError`
 
         """
         future = concurrent.TracebackFuture()
@@ -54,9 +54,9 @@ class ServerMixin(object):
         """Returns the message that was sent to the Redis server.
 
         :param message: The message to echo
-        :type message: str, bytes
+        :type message: :class:`str`, :class:`bytes`
         :rtype: bytes
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'ECHO', message])
@@ -72,7 +72,7 @@ class ServerMixin(object):
         case it returns a copy of the argument.
 
         :rtype: bytes
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'PING'])
@@ -82,7 +82,7 @@ class ServerMixin(object):
         soon as all pending replies have been written to the client.
 
         :rtype: bool
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'QUIT'], b'OK')
@@ -93,7 +93,7 @@ class ServerMixin(object):
 
         :param int index: The database to select
         :rtype: bool
-        :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
+        :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
         return self._execute([b'SELECT', ascii(index).encode('ascii')], b'OK')
