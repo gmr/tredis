@@ -23,7 +23,6 @@ class ConnectTests(base.AsyncTestCase):
     def _kill_client(self, client):
         results = yield client._execute([b'CLIENT', b'LIST'])
         matches = ADDR_PATTERN.findall(results.decode('ascii'))
-        print(len(matches))
         value = None
         for match, addr in matches:
             value = addr
@@ -36,6 +35,14 @@ class ConnectTests(base.AsyncTestCase):
         client = tredis.RedisClient(str(uuid.uuid4()))
         with self.assertRaises(exceptions.ConnectError):
             yield client.get('foo')
+
+    @testing.gen_test
+    def test_bad_connect_in_pipeline_raises_exception(self):
+        client = tredis.RedisClient(str(uuid.uuid4()))
+        with self.assertRaises(exceptions.ConnectError):
+            client.pipeline_start()
+            client.get('foo')
+            yield client.pipeline_execute()
 
     @testing.gen_test
     def test_bad_db_raises_exception(self):
@@ -72,3 +79,27 @@ class ConnectTests(base.AsyncTestCase):
         self.assertTrue(result)
         with self.assertRaises(exceptions.ConnectionError):
             yield self.client.get('foo')
+
+    @testing.gen_test
+    def test_competing_connections(self):
+        result1 = self.client.set('foo', 'bar', 10)
+        result2 = self.client.set('foo', 'baz', 10)
+        yield result1
+        yield result2
+
+        self.assertTrue(result1)
+        self.assertTrue(result2)
+
+    @testing.gen_test
+    def test_competing_connections(self):
+        result1 = self.client.set('foo', 'bar', 10)
+        result2 = self.client.set('foo', 'baz', 10)
+        yield result1
+        yield result2
+        self.assertTrue(result1)
+        self.assertTrue(result2)
+
+    @testing.gen_test
+    def test_close_unopened_client(self):
+        with self.assertRaises(exceptions.ConnectionError):
+            self.client.close()

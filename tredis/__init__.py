@@ -1,7 +1,7 @@
 """
-tredis
+TRedis
 ======
-A pure-python Redis client built for Tornado
+An asynchronous Redis client for Tornado
 
 """
 import logging
@@ -29,7 +29,7 @@ from tredis import sortedsets
 from tredis import strings
 from tredis import transactions
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -106,13 +106,18 @@ class RedisClient(server.ServerMixin,
         super(RedisClient, self).__init__()
 
     def close(self):
-        """Close the Redis server connection"""
-        if self._stream:
-            self._stream.close()
+        """Close the Redis server connection
+
+        :raises: :class:`~tredis.exceptions.ConnectionError`
+
+        """
+        if not self._stream:
+            raise exceptions.ConnectionError('Not connected')
+        self._stream.close()
 
     def pipeline_start(self):
         """Start a command pipeline. The pipeline will only run when you invoke
-        :py:meth:`pipeline_execute <tredis.RedisClient.pipeline_execute>`.
+        :meth:`~tredis.RedisClient.pipeline_execute`.
 
         .. code-block:: python
            :caption: Pipeline Example
@@ -128,14 +133,12 @@ class RedisClient(server.ServerMixin,
            responses = yield client.pipeline_execute()
 
         .. warning:: Yielding after calling
-           :py:meth:`pipeline_start <tredis.RedisClient.pipeline_start>` and
-           before calling
-           :py:meth:`pipeline_execute <tredis.RedisClient.pipeline_execute>`
-           can cause asynchronous request scope issues, as the client does not
-           protect against other asynchronous requests from populating the
-           pipeline. The only way to prevent this from happening is to make
-           all pipeline additions inline without yielding to the
-           :py:class:`IOLoop <tornado.ioloop.IOLoop>`.
+           :meth:`~tredis.RedisClient.pipeline_start` and before calling
+           :meth:`~tredis.RedisClient.pipeline_execute` can cause asynchronous
+           request scope issues, as the client does not protect against other
+           asynchronous requests from populating the pipeline. The only way to
+           prevent this from happening is to make all pipeline additions inline
+           without yielding to the :class:`~tornado.ioloop.IOLoop`.
 
         .. note:: While the client sends commands using pipelining, the server
            will be forced to queue the replies, using memory. So if you need
@@ -152,11 +155,11 @@ class RedisClient(server.ServerMixin,
 
     def pipeline_execute(self):
         """Execute the pipeline created by issuing commands after invoking
-        :py:meth:`pipeline_start <tredis.RedisClient.pipeline_start>`. Returns
-        a list of Redis responses.
+        :meth:`~tredis.RedisClient.pipeline_start`. Returns a list of responses
+        from the Redis server
 
         :rtype: list
-        :raises: ValueError
+        :raises: :exc:`ValueError`
 
         """
         commands = len(self._pipeline_commands)
@@ -170,7 +173,7 @@ class RedisClient(server.ServerMixin,
             """Process the response future
 
             :param response: The response future
-            :type response: :py:class:`tornado.concurrent.Future`
+            :type response: :class:`tornado.concurrent.Future`
 
             """
             exc = response.exception()
@@ -193,6 +196,12 @@ class RedisClient(server.ServerMixin,
                                    self._pipeline_commands[index][2])
 
         def on_ready(connection_ready):
+            """Invoked once the connection has been established
+
+            :param connection_ready: The connection future
+            :type connection_ready: tornado.concurrent.Future
+
+            """
             connection_error = connection_ready.exception()
             if connection_error:
                 return future.set_exception(connection_error)
@@ -208,14 +217,28 @@ class RedisClient(server.ServerMixin,
             pipeline = b''.join([cmd[0] for cmd in self._pipeline_commands])
             self._stream.write(pipeline, callback=on_written)
 
-        self._maybe_connect(on_ready)
+        def on_locked(lock):
+            """Invoked once the lock has been acquired.
+
+            :param tornado.concurrent.Future lock: The lock future
+
+            """
+            LOGGER.debug('Executing pipeline with lock %r', lock)
+            self._maybe_connect(on_ready)
+
+        # Start executing once locked
+        lock_future = self._busy.acquire()
+        self._ioloop.add_future(lock_future, on_locked)
+
+        # Release the lock when the future is complete
+        self._ioloop.add_future(future, lambda r: self._busy.release())
         return future
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
 
         :param list parts: The list of strings for building the command
-        :type: bytes
+        :rtype: bytes
 
         """
         return self._encode_resp(parts)
@@ -248,18 +271,24 @@ class RedisClient(server.ServerMixin,
         :param list parts: The list of command parts
         :param mixed expectation: Optional response expectation
 
-        :rtype: :py:class:`tornado.concurrent.Future`
+        :rtype: :class:`~tornado.concurrent.Future`
 
         """
-        LOGGER.debug('_execute (%r, %r)', expectation, format_callback)
+        LOGGER.debug('_execute (%r, %r, %r)',
+                     parts, expectation, format_callback)
         command = self._build_command(parts)
         if self._pipeline:
             return self._pipeline_add(command, expectation, format_callback)
 
         future = concurrent.TracebackFuture()
-        LOGGER.debug('Executing %r (%r)', command, expectation)
 
         def on_ready(connection_ready):
+            """Invoked once the connection has been established
+
+            :param connection_ready: The connection future
+            :type connection_ready: tornado.concurrent.Future
+
+            """
             connection_error = connection_ready.exception()
             if connection_error:
                 return future.set_exception(connection_error)
@@ -273,45 +302,59 @@ class RedisClient(server.ServerMixin,
             except iostream.StreamClosedError as error:
                 future.set_exception(exceptions.ConnectionError(error))
 
-        self._maybe_connect(on_ready)
+        def on_locked(lock):
+            """Invoked once the lock has been acquired.
+
+            :param tornado.concurrent.Future lock: The lock future
+
+            """
+            LOGGER.debug('Executing %r (%r) with lock %r',
+                         command, expectation, lock)
+            self._maybe_connect(on_ready)
+
+        # Start executing once locked
+        lock_future = self._busy.acquire()
+        self._ioloop.add_future(lock_future, on_locked)
+
+        # Release the lock when the future is complete
+        self._ioloop.add_future(future, lambda r: self._busy.release())
         return future
 
     def _get_response(self, future, expectation=None, format_callback=None):
         """Read and parse command execution responses from Redis
 
         :param future: The future for the possible response
-        :type future: :py:class:`tornado.concurrent.Future`
+        :type future: :class:`~tornado.concurrent.Future`
         :param mixed expectation: An optional response expectation
 
         """
 
         def on_data(data):
+            LOGGER.debug('Read %r', data)
             self._reader.feed(data)
             self._get_response(future, expectation, format_callback)
 
         response = self._reader.gets()
         if response is not False:
-
-            LOGGER.debug('Processing response (%r, %r, %r)', future, expectation, format_callback)
-
             if isinstance(response, hiredis.ReplyError):
-                return future.set_exception(exceptions.RedisError(response))
+                future.set_exception(exceptions.RedisError(response))
             elif format_callback is not None:
-                return future.set_result(format_callback(response))
+                future.set_result(format_callback(response))
             elif expectation is not None:
                 if isinstance(expectation, int) and expectation > 1:
-                    return future.set_result(response == expectation or
-                                             response)
-                return future.set_result(response == expectation)
-            future.set_result(response)
+                    future.set_result(response == expectation or response)
+                else:
+                    future.set_result(response == expectation)
+            else:
+                future.set_result(response)
         else:
             self._read(on_data)
 
     def _maybe_connect(self, callback):
         """Connect to the Redis server, selecting the specified database.
 
-        :raises: :py:class:`ConnectError <tredis.ConnectError>`
-                 :py:class:`RedisError <tredis.RedisError>`
+        :raises: :class:`~tredis.exceptions.ConnectError`
+                 :class:`~tredis.exceptions..RedisError`
 
         """
         future = concurrent.TracebackFuture()
@@ -320,48 +363,48 @@ class RedisClient(server.ServerMixin,
         if self._stream:
             return future.set_result(True)
 
+        LOGGER.info('Connecting to %s:%i', self._host, self._port)
+        connect_future = self._client.connect(self._host, self._port)
+
+        def on_selected(response):
+            """Invoked when the default database is selected when connecting
+
+            :param response: The connection response future
+            :type response: :class:`~tornado.concurrent.Future`
+
+            """
+            exc = response.exception()
+            if exc:
+                future.set_exception(exceptions.RedisError(exc))
+            else:
+                future.set_result(response.result == b'OK')
+
         def on_connect(response):
             """Invoked when the socket stream has connected
 
             :param response: The connection response future
-            :type response: :py:class:`tornado.concurrent.Future`
+            :type response: :class:`~tornado.concurrent.Future`
 
             """
             exc = response.exception()
             if exc:
                 return future.set_exception(exceptions.ConnectError(str(exc)))
 
-            LOGGER.debug('Connected')
             self._stream = response.result()
             self._stream.set_close_callback(self._on_closed)
-
             if not self._default_db:
-                self._connecting.set()
                 return future.set_result(True)
 
-            def on_selected(selected_response):
-                err = selected_response.exception()
-                if err:
-                    future.set_exception(err)
-                    return
-                self._connecting.set()
-                future.set_result(True)
-            LOGGER.debug('Selected the default database')
-            selected = self._execute(['SELECT', ascii(self._default_db)])
-            self._ioloop.add_future(selected, on_selected)
+            def on_written():
+                select_future = concurrent.TracebackFuture()
+                self._get_response(select_future)
+                self._ioloop.add_future(select_future, on_selected)
 
-        if self._connecting and not self._connecting.is_set():
-            def on_connected(_response):
-                future.set_result(True)
-            LOGGER.debug('Waiting on other connection attempt')
-            wait = self._connecting.wait()
-            self._ioloop.add_future(wait, on_connected)
+            LOGGER.debug('Selecting the default db: %r', self._default_db)
+            command = self._build_command(['SELECT', ascii(self._default_db)])
+            self._stream.write(command, on_written)
 
-        else:
-            LOGGER.debug('Connecting to %s:%i', self._host, self._port)
-            self._connecting = locks.Event()
-            connect_future = self._client.connect(self._host, self._port)
-            self._ioloop.add_future(connect_future, on_connect)
+        self._ioloop.add_future(connect_future, on_connect)
 
     def _on_closed(self):
         """Invoked when the connection is closed"""

@@ -527,10 +527,9 @@ class MigrationTests(base.AsyncTestCase):
         result = yield self.client.migrate(self.redis2_host, 6379, key, 10,
                                            5000)
         self.assertTrue(result)
-
         client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
-        result = yield client.get(key)
-        self.assertEqual(result, value)
+        response = yield client.get(key)
+        self.assertEqual(response, value)
         result = yield self.client.get(key)
         self.assertIsNone(result)
 
