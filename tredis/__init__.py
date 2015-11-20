@@ -432,11 +432,3 @@ class _PipelineResponses(object):
 
         """
         self.values.append(value)
-
-
-class _RESPArrayNamespace(object):
-    """Class for dealing with recursive async calls"""
-
-    def __init__(self):
-        self.depth = 0
-        self.values = []
