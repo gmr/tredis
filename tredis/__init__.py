@@ -380,27 +380,6 @@ class RedisClient(server.ServerMixin,
         LOGGER.debug('Adding to pipeline (%r, %r)' % (command, expectation))
         self._pipeline_commands.append((command, expectation, format_callback))
 
-    @staticmethod
-    def _pipeline_int_is_1(value):
-        """Method invoked when evaluating a pipeline response looking for
-        the value of 1
-
-        :param int value: The Redis response to evaluate
-        :rtype: bool
-
-        """
-        return value == 1
-
-    @staticmethod
-    def _pipeline_is_ok(value):
-        """Method invoked when evaluating a pipeline response for b'OK'
-
-        :param bytes value: The Redis response to evaluate
-        :rtype: bool
-
-        """
-        return value == b'OK'
-
     def _read(self, callback=None):
         """Asynchronously read a number of bytes.
 
