@@ -4,7 +4,7 @@ An asynchronous Redis client for Tornado
 
 |Version| |Downloads| |Status| |Coverage| |CodeClimate| |PythonVersions|
 
-Documentation is available at `tredis.readthedocs.org <http://tredis.readthedocs.org_>`_.
+Documentation is available at `tredis.readthedocs.org <http://tredis.readthedocs.org>`_.
 
 Commands Implemented
 --------------------
