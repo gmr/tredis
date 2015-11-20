@@ -127,8 +127,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
-                             1)
+        return self._execute(
+            [b'EXPIRE', key, ascii(timeout).encode('ascii')], 1)
 
     def expireat(self, key, timestamp):
         """:py:class:`expireat <tredis.RedisClient.expireat>` has the same
@@ -151,8 +151,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute([b'EXPIREAT', key,
-                              ascii(timestamp).encode('ascii')], 1)
+        return self._execute(
+            [b'EXPIREAT', key, ascii(timestamp).encode('ascii')], 1)
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -343,8 +343,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute([b'PEXPIRE', key, ascii(timeout).encode('ascii')],
-                             1)
+        return self._execute(
+            [b'PEXPIRE', key, ascii(timeout).encode('ascii')], 1)
 
     def pexpireat(self, key, timestamp):
         """:py:class:`pexpireat <tredis.RedisClient.pexpireat>` has the same
@@ -364,8 +364,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute([b'PEXPIREAT', key,
-                              ascii(timestamp).encode('ascii')], 1)
+        return self._execute(
+            [b'PEXPIREAT', key, ascii(timestamp).encode('ascii')], 1)
 
     def pttl(self, key):
         """Like :py:class:`ttl <tredis.RedisClient.ttl>` this command returns
@@ -394,7 +394,6 @@ class KeysMixin(object):
 
         """
         return self._execute([b'PTTL', key])
-
 
     def randomkey(self):
         """Return a random key from the currently selected database.
@@ -538,6 +537,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
+
         def format_response(value):
             """Format the response from redis
 
