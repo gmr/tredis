@@ -7,6 +7,7 @@ import mock
 import uuid
 
 from tornado import testing
+from tornado import gen
 
 import tredis
 from tredis import exceptions
@@ -32,29 +33,28 @@ class ConnectTests(base.AsyncTestCase):
         with self.assertRaises(exceptions.RedisError):
             yield client.get('foo')
 
-    """
     @testing.gen_test
     def test_close_invokes_iostream_close(self):
-        client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('REDIS_PORT', '6379')), 0)
-        with mock.patch.object(client._stream, 'close') as close:
-            client.close()
+        r = yield self.client.set('foo', 'bar', 1)  # Establish the connection
+        with mock.patch.object(self.client._stream, 'close') as close:
+            self.client.close()
             close.assert_called_once_with()
-    """
 
     @testing.gen_test
     def test_on_close_callback_invoked(self):
-        callback_method = mock.Mock()
+        on_close = mock.Mock()
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                     int(os.getenv('REDIS_PORT', '6379')), 0,
-                                    callback_method)
+                                    on_close)
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)
         results = yield client._execute([b'CLIENT', b'LIST'])
         matches = ADDR_PATTERN.findall(results.decode('ascii'))
+        print(len(matches))
         value = None
         for match, addr in matches:
             value = addr
         self.assertIsNotNone(value, 'Could not find client')
         yield client._execute([b'CLIENT', b'KILL', value.encode('ascii')])
-        callback_method.assert_called_once_with()
+        yield gen.sleep(0.1)  # IOLoop needs ot process for assertion
+        on_close.assert_called_once_with()

@@ -33,40 +33,7 @@ class SetsMixin(object):
         :rtype: bool, int
 
         """
-        command = [b'SADD', key] + list(members)
-
-        def _eval_response(value):
-            """Evaluate the response from redis
-
-            :param int value: The number of values added
-            :rtype: int, bool
-
-            """
-            if value == len(members):
-                return True
-            else:
-                return value
-
-        if self._pipeline:
-            return self._pipeline_add(command, _eval_response)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the redis response
-
-            :param response: The future with the response
-            :type response: tornado.concurrent.Future
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(_eval_response(response.result()))
-
-        self._execute(command, on_response)
-        return future
+        return self._execute([b'SADD', key] + list(members), len(members))
 
     def scard(self, key):
         """Returns the set cardinality (number of elements) of the set stored
@@ -202,7 +169,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([b'SISMEMBER', key, member])
+        return self._execute([b'SISMEMBER', key, member], 1)
 
     def smembers(self, key):
         """Returns all the members of the set value stored at key.
@@ -250,9 +217,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'SMOVE', source, destination, member
-        ])
+        return self._execute([b'SMOVE', source, destination, member], 1)
 
     def spop(self, key, count=None):
         """Removes and returns one or more random elements from the set value
@@ -345,40 +310,7 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SREM', key] + list(members)
-
-        def _eval_response(value):
-            """Evaluate the response from redis
-
-            :param int value: The number of values removed
-            :rtype: int, bool
-
-            """
-            if value == len(members):
-                return True
-            else:
-                return value
-
-        if self._pipeline:
-            return self._pipeline_add(command, _eval_response)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the redis response
-
-            :param response: The future with the response
-            :type response: tornado.concurrent.Future
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(_eval_response(response.result()))
-
-        self._execute(command, on_response)
-        return future
+        return self._execute([b'SREM', key] + list(members), len(members))
 
     def sscan(self, key, cursor=0, pattern=None, count=None):
         """The :py:class:`sscan <tredis.RedisClient.sscan>` command and the
@@ -427,13 +359,8 @@ class SetsMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'SSCAN', key, ascii(cursor).encode('ascii')]
-        if pattern:
-            command += [b'MATCH', pattern]
-        if count:
-            command += [b'COUNT', ascii(count).encode('ascii')]
 
-        def _format_response(value):
+        def format_response(value):
             """Format the response from redis
 
             :param tuple value: The return response from redis
@@ -442,26 +369,12 @@ class SetsMixin(object):
             """
             return int(value[0]), value[1]
 
-        if self._pipeline:
-            return self._pipeline_add(command, _format_response)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the redis response
-
-            :param response: The future with the response
-            :type response: tornado.concurrent.Future
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(_format_response(response.result()))
-
-        self._execute(command, on_response)
-        return future
+        command = [b'SSCAN', key, ascii(cursor).encode('ascii')]
+        if pattern:
+            command += [b'MATCH', pattern]
+        if count:
+            command += [b'COUNT', ascii(count).encode('ascii')]
+        return self._execute(command, format_callback=format_response)
 
     def sunion(self, *keys):
         """Returns the members of the set resulting from the union of all the

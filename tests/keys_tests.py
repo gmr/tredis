@@ -43,14 +43,6 @@ class KeyCommandTests(base.AsyncTestCase):
         self.assertEqual(result, 2)
 
     @testing.gen_test
-    def test_delete_with_error(self):
-        key = self.uuid4()
-        self._execute_result = exceptions.RedisError('Test Exception')
-        with mock.patch.object(self.client, '_execute', self._execute):
-            with self.assertRaises(exceptions.RedisError):
-                yield self.client.delete(key)
-
-    @testing.gen_test
     def test_dump_and_restore(self):
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
@@ -627,7 +619,8 @@ class PipelineTests(base.AsyncTestCase):
         expectation.append(True)  # 10
 
         for value in self.uuid4(3):
-            self.client._pipeline_add([b'ZADD', key2, b'1', value])
+            command = self.client._build_command([b'ZADD', key2, b'1', value])
+            self.client._pipeline_add(command, 1, None)
             expectation.append(True)  # 11-13
 
         self.client.object_refcount(key2)

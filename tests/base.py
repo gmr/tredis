@@ -26,13 +26,13 @@ class AsyncTestCase(testing.AsyncTestCase):
                                expiration or self.DEFAULT_EXPIRATION,
                                nx=nx, xx=xx)
 
-    def _execute(self, parts, callback):
+    def _execute(self, parts, expectation=None, format_callback=None):
         future = concurrent.Future()
-        future.add_done_callback(callback)
         if isinstance(self._execute_result, Exception):
             future.set_exception(self._execute_result)
         else:
             future.set_result(self._execute_result)
+        return future
 
     def uuid4(self, qty=1):
         if qty == 1:

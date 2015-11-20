@@ -5,10 +5,12 @@ A pure-python Redis client built for Tornado
 
 """
 import logging
-import time
 
+import hiredis
 from tornado import concurrent
 from tornado import ioloop
+from tornado import locks
+from tornado import iostream
 from tornado import tcpclient
 
 from tredis import exceptions
@@ -85,6 +87,10 @@ class RedisClient(server.ServerMixin,
                  port=DEFAULT_PORT,
                  db=DEFAULT_DB,
                  on_close=None):
+        self._buffer = bytes()
+        self._busy = locks.Lock()
+        self._client = tcpclient.TCPClient()
+        self._connecting = None
         self._default_db = int(db or DEFAULT_DB)
         self._host = host
         self._port = port
@@ -93,14 +99,15 @@ class RedisClient(server.ServerMixin,
         self._pipeline = False
         self._pipeline_commands = []
         self._pool = []
+        self._reader = hiredis.Reader()
+        self._stream = None
         super(RedisClient, self).__init__()
 
     def close(self):
-        """Close all of the pooled connections to the Redis Server"""
-        for conn in self._pool:
-            if not conn.closed:
-                conn.close()
-        self._pool = []
+        """Close the Redis server connection"""
+        print('Close', self._stream, self._client)
+        if self._stream:
+            self._stream.close()
 
     def pipeline_start(self):
         """Start a command pipeline. The pipeline will only run when you invoke
@@ -135,8 +142,10 @@ class RedisClient(server.ServerMixin,
 
     def pipeline_execute(self):
         """Execute the pipeline created by issuing commands after invoking
-        :py:meth:`pipeline_start <tredis.RedisClient.pipeline_start`.
+        :py:meth:`pipeline_start <tredis.RedisClient.pipeline_start>`. Returns
+        a list of Redis responses.
 
+        :rtype: list
         :raises: ValueError
 
         """
@@ -145,26 +154,51 @@ class RedisClient(server.ServerMixin,
             raise ValueError('Empty pipeline')
 
         future = concurrent.TracebackFuture()
-        conn_future = self._get_connection()
+        pipeline_responses = _PipelineResponses()
 
-        def on_connected(response):
+        def on_response(response):
+            """Process the response future
+
+            :param response: The response future
+            :type response: :py:class:`tornado.concurrent.Future`
+
+            """
             exc = response.exception()
             if exc:
-                future.set_exception(exceptions.ConnectError(str(exc)))
-                return
+                pipeline_responses.append(exc)
+            else:
+                pipeline_responses.append(response.result())
 
-            conn = response.result()
+            index = len(pipeline_responses.values)
 
-            def on_complete(pipeline_response):
-                conn.release()
-                err = response.exception()
-                if err:
-                    future.set_exception(err)
-                    return
-                future.set_result(pipeline_response.result())
-            response_future = self._pipeline_execute(conn)
-            self._ioloop.add_future(response_future, on_complete)
-        self._ioloop.add_future(conn_future, on_connected)
+            if index == len(self._pipeline_commands):
+                self._pipeline = False
+                self._pipeline_commands = []
+                future.set_result(pipeline_responses.values)
+            else:
+                response_future = concurrent.TracebackFuture()
+                self._ioloop.add_future(response_future, on_response)
+                self._get_response(response_future,
+                                   self._pipeline_commands[index][1],
+                                   self._pipeline_commands[index][2])
+
+        def on_ready(connection_ready):
+            connection_error = connection_ready.exception()
+            if connection_error:
+                return future.set_exception(connection_error)
+
+            def on_written():
+                """Invoked when the command has been written to the socket"""
+                response_future = concurrent.TracebackFuture()
+                self._ioloop.add_future(response_future, on_response)
+                self._get_response(response_future,
+                                   self._pipeline_commands[0][1],
+                                   self._pipeline_commands[0][2])
+
+            pipeline = b''.join([cmd[0] for cmd in self._pipeline_commands])
+            self._stream.write(pipeline, callback=on_written)
+
+        self._maybe_connect(on_ready)
         return future
 
     def _build_command(self, parts):
@@ -198,416 +232,143 @@ class RedisClient(server.ServerMixin,
         else:
             raise ValueError('Unsupported type: {0}'.format(type(value)))
 
-    def _execute(self, parts, callback=None):
-        """Execute a Redis command.
-
-        :param list parts: The list of command parts
-        :param method callback: The optional method to invoke when complete
-        :rtype: :py:class:`tornado.concurrent.Future`
-
-        """
-        if self._pipeline:
-            return self._pipeline_add(parts)
-        return self._execute1(parts, callback)
-
-    def _execute1(self, parts, callback=None):
+    def _execute(self, parts, expectation=None, format_callback=None):
         """Really execute a redis command
 
         :param list parts: The list of command parts
-        :param method callback: The optional method to invoke when complete
+        :param mixed expectation: Optional response expectation
+
         :rtype: :py:class:`tornado.concurrent.Future`
 
         """
+        LOGGER.debug('_execute (%r, %r)', expectation, format_callback)
         command = self._build_command(parts)
-
-        future = concurrent.TracebackFuture()
-        if callback:
-            self._ioloop.add_future(future, callback)
-
-        connection_future = self._get_connection()
-
-        def on_connected(response):
-            exc = response.exception()
-            if exc:
-                LOGGER.debug('Connection exception: %r', exc)
-                future.set_exception(exc)
-                return
-
-            conn = response.result()
-            LOGGER.debug('Connected: %r', conn)
-
-            def on_complete(command_response):
-                err = command_response.exception()
-                if err:
-                    LOGGER.debug('_execute_command exception: %r', err)
-                    future.set_exception(err)
-                else:
-                    LOGGER.debug('_execute_command complete')
-                    future.set_result(command_response.result())
-
-            execute_future = self._execute_command(conn, command)
-            self._ioloop.add_future(execute_future, on_complete)
-
-        self._ioloop.add_future(connection_future, on_connected)
-        return future
-
-    def _execute_command(self, conn, command):
-        """Execute a Redis command.
-
-        :param tredis.Connection conn: The connection to use
-        :param bytes command: The command to run
-        :rtype: :py:class:`tornado.concurrent.Future`
-
-        """
-        LOGGER.debug('Executing command %r on %r', command, conn)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the response future
-
-            :param response: The response future
-            :type response: :py:class:`tornado.concurrent.Future`
-
-            """
-            conn.release()
-            exc = response.exception()
-            if exc:
-                LOGGER.debug('Error calling get_response: %r', exc)
-                future.set_exception(exc)
-            else:
-                LOGGER.debug('get_response result: %r', response.result())
-                future.set_result(response.result())
-
-        def on_written():
-            """Invoked when the command has been written to the socket"""
-            LOGGER.debug('Fetching response: %r', conn)
-            response_future = self._get_response(conn)
-            self._ioloop.add_future(response_future, on_response)
-
-        conn.write(command, callback=on_written)
-        return future
-
-    def _execute_and_eval_int_resp(self, parts):
-        """Execute a command returning a boolean based upon the response.
-
-        :param list parts: The command parts
-        :rtype: bool
-
-        """
         if self._pipeline:
-            return self._pipeline_add(parts, self._pipeline_int_is_1)
+            return self._pipeline_add(command, expectation, format_callback)
 
         future = concurrent.TracebackFuture()
+        LOGGER.debug('Executing %r (%r)', command, expectation)
 
-        def on_response(response):
-            """Process the response future
+        def on_ready(connection_ready):
+            connection_error = connection_ready.exception()
+            if connection_error:
+                return future.set_exception(connection_error)
 
-            :param response: The response future
-            :type response: :py:class:`tornado.concurrent.Future`
+            def on_written():
+                """Invoked when the command has been written to the socket"""
+                self._get_response(future, expectation, format_callback)
 
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                LOGGER.debug('%r == %r', parts, response.result())
-                future.set_result(response.result() == 1)
+            try:
+                self._stream.write(command, callback=on_written)
+            except iostream.StreamClosedError as error:
+                future.set_exception(exceptions.ConnectionError(error))
 
-        execute_future = self._execute1(parts)
-        self._ioloop.add_future(execute_future, on_response)
+        self._maybe_connect(on_ready)
         return future
 
-    def _execute_and_eval_ok_resp(self, parts):
-        """Execute a command returning a boolean based upon the response.
+    def _get_response(self, future, expectation=None, format_callback=None):
+        """Read and parse command execution responses from Redis
 
-        :param list parts: The command parts
-        :rtype: bool
+        :param future: The future for the possible response
+        :type future: :py:class:`tornado.concurrent.Future`
+        :param mixed expectation: An optional response expectation
 
         """
-        if self._pipeline:
-            return self._pipeline_add(parts, self._pipeline_is_ok)
 
-        future = concurrent.TracebackFuture()
+        def on_data(data):
+            self._reader.feed(data)
+            self._get_response(future, expectation, format_callback)
 
-        def on_response(response):
-            """Process the response future
+        response = self._reader.gets()
+        if response is not False:
 
-            :param response: The response future
-            :type response: :py:class:`tornado.concurrent.Future`
+            LOGGER.debug('Processing response (%r, %r, %r)', future, expectation, format_callback)
 
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(response.result() == b'OK')
+            if isinstance(response, hiredis.ReplyError):
+                return future.set_exception(exceptions.RedisError(response))
+            elif format_callback is not None:
+                return future.set_result(format_callback(response))
+            elif expectation is not None:
+                if isinstance(expectation, int) and expectation > 1:
+                    return future.set_result(response == expectation or
+                                             response)
+                return future.set_result(response == expectation)
+            future.set_result(response)
+        else:
+            self._read(on_data)
 
-        execute_future = self._execute1(parts)
-        self._ioloop.add_future(execute_future, on_response)
-        return future
+    def _maybe_connect(self, callback):
+        """Connect to the Redis server, selecting the specified database.
 
-    def _get_array(self, conn, segments, callback):
-        """Read in an array by calling :py:meth:`RedisClient._get_response`
-        for each element in the array.
-
-        :param tredis.Connection conn: The connection to use
-        :param int segments: The number of segments to read
-        :param method callback: The method to call when the array is complete
-
-        """
-        future = concurrent.TracebackFuture()
-        self._ioloop.add_future(future, callback)
-        ns = _RESPArrayNamespace()
-        ns.depth = int(segments)
-
-        def on_response(response):
-            """Process the response data
-
-            :param response: The future with the response
-            :type response: :py:class:`tornado.concurrent.Future`
-
-            """
-            ns.values.append(response.result())
-            ns.depth -= 1
-            if not ns.depth:
-                future.set_result(ns.values)
-            else:
-                nested_future = self._get_response(conn)
-                self._ioloop.add_future(nested_future, on_response)
-
-        response_future = self._get_response(conn)
-        self._ioloop.add_future(response_future, on_response)
-        return future
-
-    def _get_connection(self):
-        """Get and lock an established connection from the connection pool,
-        adding a new one if it does not exist, connecting the first unused
-        connection in the pool, if it exists.
-
-        :rtype: :py:class:`tredis.Connection`
         :raises: :py:class:`ConnectError <tredis.ConnectError>`
                  :py:class:`RedisError <tredis.RedisError>`
 
         """
         future = concurrent.TracebackFuture()
+        self._ioloop.add_future(future, callback)
 
-        connections = self._idle_connections()
-        if not connections:
-            LOGGER.debug('Creating a new connection')
-            conn = Connection(self._host, self._port, self._on_closed)
-            self._pool.append(conn)
+        if self._stream:
+            return future.set_result(True)
 
-            def on_connect(response):
-                """Invoked when the socket stream has connected
+        def on_connect(response):
+            """Invoked when the socket stream has connected
 
-                :param response: The connection response future
-                :type response: :py:class:`tornado.concurrent.Future`
-
-                """
-                exc = response.exception()
-                if exc:
-                    LOGGER.error('Error connecting to %s:%s: %s',
-                                 self._host, self._port, exc)
-                    future.set_exception(exceptions.ConnectError(str(exc)))
-                else:
-                    conn.lock()
-                    if self._default_db:
-
-                        def on_selected(selected_response):
-                            err = selected_response.exception()
-                            if err:
-                                future.set_exception(err)
-                                return
-                            future.set_result(conn)
-                        cmd = self._build_command(['SELECT',
-                                                   ascii(self._default_db)])
-                        select_future = self._execute_command(conn, cmd)
-                        self._ioloop.add_future(select_future, on_selected)
-                    else:
-                        future.set_result(conn)
-
-            connect_future = conn.connect()
-            self._ioloop.add_future(connect_future, on_connect)
-            return future
-
-        connections[0].lock()
-        future.set_result(connections[0])
-        return future
-
-    def _get_response(self, conn):
-        """Read and parse command execution responses from Redis
-
-        :param tredis.Connection conn: The connection to use
-        :rtype: :py:class:`tornado.concurrent.Future`
-
-        """
-        future = concurrent.TracebackFuture()
-
-        def on_first_byte(first_byte):
-            """Process the first byte response data
-
-            :param first_byte: The byte indicating the RESP data type
-            :type first_byte: bytes
-
-            """
-            if first_byte == b'+':
-
-                def on_response(response):
-                    """Process the response data
-
-                    :param response: The response data
-                    :type response: bytes
-
-                    """
-                    future.set_result(response[0:-2])
-
-                conn.read_until(CRLF, on_response)
-            elif first_byte == b'-':
-
-                def on_response(response):  # pragma: nocover
-                    """Process the response data
-
-                    :param response: The response data
-                    :type response: bytes
-
-                    """
-                    error = response[0:-2].decode('utf-8')
-                    if error.startswith('ERR'):
-                        error = error[4:]
-                    future.set_exception(exceptions.RedisError(error))
-
-                conn.read_until(CRLF, callback=on_response)
-            elif first_byte == b':':
-
-                def on_response(response):
-                    """Process the response data
-
-                    :param response: The response data
-                    :type response: bytes
-
-                    """
-                    future.set_result(int(response[:-2]))
-
-                conn.read_until(CRLF, callback=on_response)
-            elif first_byte == b'$':
-
-                def on_payload(response):
-                    """Process the response data
-
-                    :param response: The response data
-                    :type response: bytes
-
-                    """
-                    future.set_result(response[:-2])
-
-                def on_response(response):
-                    """Process the response data
-
-                    :param response: The response data
-                    :type response: bytes
-
-                    """
-                    if response == b'-1\r\n':
-                        future.set_result(None)
-                    else:
-                        conn.read_bytes(int(response.strip()) + 2, on_payload)
-
-                conn.read_until(CRLF, callback=on_response)
-            elif first_byte == b'*':
-
-                def on_complete(response):
-                    """Process the response data
-
-                    :param response: The future with the response
-                    :type response: :py:class:`tornado.concurrent.Future`
-
-                    """
-                    future.set_result(response.result())
-
-                def on_segments(response):
-                    """Process the response segment data
-
-                    :param response: The response array segment data
-                    :type response: int
-
-                    """
-                    self._get_array(conn, response, on_complete)
-
-                conn.read_until(CRLF, callback=on_segments)
-
-            else:  # pragma: nocover
-                future.set_exception(ValueError(
-                    'Unknown RESP first-byte: {}'.format(first_byte)))
-
-        conn.read_bytes(1, callback=on_first_byte)
-        return future
-
-    def _idle_connections(self):
-        """Return a list of idle :py:class:`tredis.Connection` objects.
-
-        :rtype: list
-
-        """
-        return [c for c in sorted(self._pool,
-                                  key=lambda x: x.idle,
-                                  reverse=True) if not c.locked]
-
-    def _on_closed(self, conn):
-        """Invoked when the connection is closed"""
-        LOGGER.error('Connection closed: %r', conn)
-        if self._on_close:
-            self._on_close()
-
-    def _pipeline_add(self, parts, response_processor=None):
-        """Add a command to execute to the pipeline
-
-        :param list parts: The command parts
-        :param method response_processor: A method for command response eval
-
-        """
-        self._pipeline_commands.append((self._build_command(parts),
-                                        response_processor))
-
-    def _pipeline_execute(self, conn):
-
-        pipeline_responses = _PipelineResponses()
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the response future
-
-            :param response: The response future
+            :param response: The connection response future
             :type response: :py:class:`tornado.concurrent.Future`
 
             """
             exc = response.exception()
             if exc:
-                pipeline_responses.append(exc)
-            else:
-                index = len(pipeline_responses.values)
-                method = self._pipeline_commands[index][1]
-                if method:
-                    pipeline_responses.append(method(response.result()))
-                else:
-                    pipeline_responses.append(response.result())
+                return future.set_exception(exceptions.ConnectError(str(exc)))
 
-            if len(pipeline_responses) == len(self._pipeline_commands):
-                self._pipeline = False
-                self._pipeline_commands = []
-                future.set_result(pipeline_responses.values)
-            else:
-                response_future = self._get_response(conn)
-                self._ioloop.add_future(response_future, on_response)
+            LOGGER.debug('Connected')
+            self._stream = response.result()
+            self._stream.set_close_callback(self._on_closed)
 
-        def on_written():
-            """Invoked when the command has been written to the socket"""
-            response = self._get_response(conn)
-            self._ioloop.add_future(response, on_response)
+            if not self._default_db:
+                self._connecting.set()
+                return future.set_result(True)
 
-        pipeline = b''.join([cmd[0] for cmd in self._pipeline_commands])
-        conn.write(pipeline, callback=on_written)
-        return future
+            def on_selected(selected_response):
+                err = selected_response.exception()
+                if err:
+                    future.set_exception(err)
+                    return
+                self._connecting.set()
+                future.set_result(True)
+            LOGGER.debug('Selected the default database')
+            selected = self._execute(['SELECT', ascii(self._default_db)])
+            self._ioloop.add_future(selected, on_selected)
+
+        if self._connecting and not self._connecting.is_set():
+            def on_connected(_response):
+                future.set_result(True)
+            LOGGER.debug('Waiting on other connection attempt')
+            wait = self._connecting.wait()
+            self._ioloop.add_future(wait, on_connected)
+
+        else:
+            LOGGER.debug('Connecting to %s:%i', self._host, self._port)
+            self._connecting = locks.Event()
+            connect_future = self._client.connect(self._host, self._port)
+            self._ioloop.add_future(connect_future, on_connect)
+
+    def _on_closed(self):
+        """Invoked when the connection is closed"""
+        LOGGER.error('Redis connection closed')
+        if self._on_close:
+            LOGGER.debug('Calling on_close callback: %r', self._on_close)
+            self._on_close()
+
+    def _pipeline_add(self, command, expectation, format_callback):
+        """Add a command to execute to the pipeline
+
+        :param bytes command: The command to execute
+        :param mixed expectation: Expectation for response evaluation
+
+        """
+        LOGGER.debug('Adding to pipeline (%r, %r)' % (command, expectation))
+        self._pipeline_commands.append((command, expectation, format_callback))
 
     @staticmethod
     def _pipeline_int_is_1(value):
@@ -630,143 +391,14 @@ class RedisClient(server.ServerMixin,
         """
         return value == b'OK'
 
-
-class Connection(object):
-    """A Wrapper to the IOStream for the Connection for use by the RedisClient
-    connection pool.
-
-    :param str host: The host to connect to
-    :param int port: The port to connect on
-    :param method on_close: The method to call if the socket closes
-
-    """
-    def __init__(self, host, port, on_close):
-        self._client = tcpclient.TCPClient()
-        self._host = host
-        self._port = port
-        self._ioloop = ioloop.IOLoop.current()
-        self._last_command = time.time()
-        self._locked = False
-        self._on_close = on_close
-        self._stream = None
-
-    def connect(self):
-        """Connect to the Redis server, selecting the specified database.
-
-        :param method callback: The method to invoke when connected
-        :raises: :py:class:`ConnectError <tredis.ConnectError>`
-                 :py:class:`RedisError <tredis.RedisError>`
-
-        """
-        LOGGER.debug('Connecting to %s:%i (%s)',
-                     self._host, self._port, id(self))
-        future = concurrent.TracebackFuture()
-
-        def on_connect(response):
-            """Invoked when the socket stream has connected
-
-            :param response: The connection response future
-            :type response: :py:class:`tornado.concurrent.Future`
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exceptions.ConnectError(str(exc)))
-            else:
-                self._stream = response.result()
-                self._stream.set_close_callback(self.on_closed)
-                future.set_result(True)
-
-        connect_future = self._client.connect(self._host, self._port)
-        self._ioloop.add_future(connect_future, on_connect)
-        return future
-
-    def close(self):
-        """Close the connection to the Redis Server"""
-        self._stream.close()
-
-    @property
-    def closed(self):
-        """Returns :py:data:`True` if the stream is closed.
-
-        :rtype: bool
-
-        """
-        return self._stream.closed()
-
-    def lock(self):
-        """Lock the connection"""
-        if self._locked:
-            raise ValueError('Already locked')
-        self._locked = True
-
-    @property
-    def locked(self):
-        """Returns :py:data:`True` if the connection is locked.
-
-        :rtype: bool
-
-        """
-        return self._locked
-
-    @property
-    def idle(self):
-        """Return the time in seconds that the connection has been idle
-
-        :rtype: int
-
-        """
-        return time.time() - (self._last_command or 0)
-
-    def on_closed(self):
-        """Invoked when the connection is closed"""
-        LOGGER.error('Connection closed (%r)', self)
-        if self._on_close:
-            self._on_close(self)
-
-    def read_bytes(self, num_bytes, callback=None, partial=False):
+    def _read(self, callback=None):
         """Asynchronously read a number of bytes.
 
-        :param num_bytes: # of bytes to read
         :param method callback: The method to call when the read is done
-        :param bool partial: Return with any bytes <= num_bytes
-        :rtype: tornado.concurrent.Future
 
         """
-        self._last_command = time.time()
-        self._stream.read_bytes(num_bytes=num_bytes, callback=callback,
-                                partial=partial)
-
-    def read_until(self, delimiter, callback=None, max_bytes=None):
-        """Asynchronously read until we have found the given delimiter.
-
-        :param bytes delimiter: The delimiter to read until
-        :param method callback: The method to call when the read is done
-        :param int max_bytes: Maximum # of bytes to read
-        :rtype: tornado.concurrent.Future
-
-        """
-        self._last_command = time.time()
-        return self._stream.read_until(delimiter=delimiter,
-                                       callback=callback,
-                                       max_bytes=max_bytes)
-
-    def release(self):
-        """Unlock the connection"""
-        #if not self._locked:
-        #    raise ValueError('Node is unlocked')
-        self._locked = False
-
-    def write(self, data, callback=None):
-        """Asynchronously write the given data to this stream.
-
-        :param bytes data: The data to write to the stream
-        :param method callback: The method to call when the data is written
-
-        """
-        LOGGER.debug('Writing data: %r', data)
-        self._last_command = time.time()
-        return self._stream.write(data, callback)
+        LOGGER.debug('Reading from the stream')
+        self._stream.read_bytes(65536, callback, None, True)
 
 
 class _PipelineResponses(object):

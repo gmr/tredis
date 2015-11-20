@@ -89,4 +89,4 @@ class StringsMixin(object):
             command.append(b'NX')
         if xx:
             command.append(b'XX')
-        return self._execute_and_eval_ok_resp(command)
+        return self._execute(command, b'OK')

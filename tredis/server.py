@@ -44,9 +44,10 @@ class ServerMixin(object):
                 else:
                     future.set_exception(exc)
             else:
-                future.set_result(response.result() == b'OK')
+                future.set_result(response.result())
 
-        self._execute([b'AUTH', password], on_response)
+        execute_future = self._execute([b'AUTH', password], b'OK')
+        self._ioloop.add_future(execute_future, on_response)
         return future
 
     def echo(self, message):
@@ -84,7 +85,7 @@ class ServerMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_ok_resp([b'QUIT'])
+        return self._execute([b'QUIT'], b'OK')
 
     def select(self, index=0):
         """Select the DB with having the specified zero-based numeric index.
@@ -95,5 +96,4 @@ class ServerMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_ok_resp([b'SELECT',
-                                               ascii(index).encode('ascii')])
+        return self._execute([b'SELECT', ascii(index).encode('ascii')], b'OK')

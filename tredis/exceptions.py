@@ -1,7 +1,6 @@
 """TRedis Exceptions"""
 
-
-class RedisError(Exception):
+class TRedisException(Exception):
     """Raised as a top-level exception class for all exceptions raised by
     :py:class:`RedisClient <tredis.RedisClient>`. The string representation
     of this class will contain the error resposne from the Redis server,
@@ -11,7 +10,7 @@ class RedisError(Exception):
     pass
 
 
-class ConnectError(RedisError):
+class ConnectError(TRedisException):
     """Raised when :py:class:`RedisClient <tredis.RedisClient>` can not connect
     to the specified Redis server.
 
@@ -19,7 +18,15 @@ class ConnectError(RedisError):
     pass
 
 
-class AuthError(RedisError):
+class ConnectionError(TRedisException):
+    """Raised when :py:class:`RedisClient <tredis.RedisClient>` has had its
+    connection to the Redis server interrupted unexpectedly.
+
+    """
+    pass
+
+
+class AuthError(TRedisException):
     """Raised when :py:meth:`RedisClient.auth <tredis.RedisClient.auth>` is
     invoked and the Redis server returns an error.
 
@@ -27,9 +34,11 @@ class AuthError(RedisError):
     pass
 
 
-class PipelineError(RedisError):
-    """Raised when a command is executed in non-pipeline mode when pipeline
-    is enabled.
+class RedisError(TRedisException):
+    """Raised as a top-level exception class for all exceptions raised by
+    :py:class:`RedisClient <tredis.RedisClient>`. The string representation
+    of this class will contain the error resposne from the Redis server,
+    if one is sent.
 
     """
     pass

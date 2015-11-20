@@ -11,9 +11,7 @@ class KeysMixin(object):
 
     def delete(self, *keys):
         """Removes the specified keys. A key is ignored if it does not exist.
-        Returns :py:data:`True` if all keys are removed. If more than one key
-        is passed in and not all keys are remove, the number of removed keys is
-        returned.
+        Returns :py:data:`True` if all keys are removed.
 
         .. note::
 
@@ -29,40 +27,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        command = [b'DEL'] + list(keys)
-
-        def _eval_response(value):
-            """Evaluate the response from redis
-
-            :param int value: The number of values added
-            :rtype: int, bool
-
-            """
-            if value == len(keys):
-                return True
-            else:
-                return value
-
-        if self._pipeline:
-            return self._pipeline_add(command, _eval_response)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the redis response
-
-            :param response: The future with the response
-            :type response: tornado.concurrent.Future
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(_eval_response(response.result()))
-
-        self._execute(command, on_response)
-        return future
+        return self._execute([b'DEL'] + list(keys), len(keys))
 
     def dump(self, key):
         """Serialize the value stored at key in a Redis-specific format and
@@ -118,7 +83,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([b'EXISTS', key])
+        return self._execute([b'EXISTS', key], 1)
 
     def expire(self, key, timeout):
         """Set a timeout on key. After the timeout has expired, the key will
@@ -162,9 +127,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'EXPIRE', key, ascii(timeout).encode('ascii')
-        ])
+        return self._execute([b'EXPIRE', key, ascii(timeout).encode('ascii')],
+                             1)
 
     def expireat(self, key, timestamp):
         """:py:class:`expireat <tredis.RedisClient.expireat>` has the same
@@ -187,9 +151,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'EXPIREAT', key, ascii(timestamp).encode('ascii')
-        ])
+        return self._execute([b'EXPIREAT', key,
+                              ascii(timestamp).encode('ascii')], 1)
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -273,7 +236,7 @@ class KeysMixin(object):
             command.append(b'COPY')
         if replace is True:
             command.append(b'REPLACE')
-        return self._execute_and_eval_ok_resp(command)
+        return self._execute(command, b'OK')
 
     def move(self, key, db):
         """Move key from the currently selected database (see
@@ -295,9 +258,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'MOVE', key, ascii(db).encode('ascii')
-        ])
+        return self._execute([b'MOVE', key, ascii(db).encode('ascii')], 1)
 
     def object_encoding(self, key):
         """Return the kind of internal representation used in order to store
@@ -364,7 +325,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([b'PERSIST', key])
+        return self._execute([b'PERSIST', key], 1)
 
     def pexpire(self, key, timeout):
         """This command works exactly like
@@ -382,9 +343,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'PEXPIRE', key, ascii(timeout).encode('ascii')
-        ])
+        return self._execute([b'PEXPIRE', key, ascii(timeout).encode('ascii')],
+                             1)
 
     def pexpireat(self, key, timestamp):
         """:py:class:`pexpireat <tredis.RedisClient.pexpireat>` has the same
@@ -404,9 +364,8 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([
-            b'PEXPIREAT', key, ascii(timestamp).encode('ascii')
-        ])
+        return self._execute([b'PEXPIREAT', key,
+                              ascii(timestamp).encode('ascii')], 1)
 
     def pttl(self, key):
         """Like :py:class:`ttl <tredis.RedisClient.ttl>` this command returns
@@ -468,11 +427,11 @@ class KeysMixin(object):
         :type key: str, bytes
         :param new_key: The key to rename it to
         :type new_key: str, bytes
-        :rtype: int
+        :rtype: bool
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_ok_resp([b'RENAME', key, new_key])
+        return self._execute([b'RENAME', key, new_key], b'OK')
 
     def renamenx(self, key, new_key):
         """Renames ``key`` to ``new_key`` if ``new_key`` does not yet exist.
@@ -487,11 +446,11 @@ class KeysMixin(object):
         :type key: str, bytes
         :param new_key: The key to rename it to
         :type new_key: str, bytes
-        :rtype: int
+        :rtype: bool
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        return self._execute_and_eval_int_resp([b'RENAMENX', key, new_key])
+        return self._execute([b'RENAMENX', key, new_key], 1)
 
     def restore(self, key, ttl, value, replace=False):
         """Create a key associated with a value that is obtained by
@@ -532,7 +491,7 @@ class KeysMixin(object):
         command = [b'RESTORE', key, ascii(ttl).encode('ascii'), value]
         if replace:
             command.append(b'REPLACE')
-        return self._execute_and_eval_ok_resp(command)
+        return self._execute(command, b'OK')
 
     def scan(self, cursor=0, pattern=None, count=None):
         """The :py:class:`scan <tredis.RedisClient.scan>` command and the
@@ -579,7 +538,7 @@ class KeysMixin(object):
         :raises: :py:exc:`RedisError <tredis.exceptions.RedisError>`
 
         """
-        def _format_response(value):
+        def format_response(value):
             """Format the response from redis
 
             :param tuple value: The return response from redis
@@ -593,28 +552,8 @@ class KeysMixin(object):
             command += [b'MATCH', pattern]
         if count:
             command += [b'COUNT', ascii(count).encode('ascii')]
-
-        if self._pipeline:
-            return self._pipeline_add(command, _format_response)
-
-        future = concurrent.TracebackFuture()
-
-        def on_response(response):
-            """Process the redis response
-
-            :param response: The future with the response
-            :type response: tornado.concurrent.Future
-
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                result = response.result()
-                future.set_result((int(result[0]), result[1]))
-
-        self._execute(command, on_response)
-        return future
+        print(command)
+        return self._execute(command, format_callback=format_response)
 
     def sort(self,
              key,
