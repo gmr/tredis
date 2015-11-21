@@ -32,7 +32,7 @@ class HyperLogLogMixin(object):
         :type key: :class:`str`, :class:`bytes`
         :param elements: One or more elements to add
         :type elements: :class:`str`, :class:`bytes`
-        :rtype: int
+        :rtype: bool
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
@@ -74,6 +74,7 @@ class HyperLogLogMixin(object):
         :param keys: One or more keys
         :type keys: :class:`str`, :class:`bytes`
         :rtype: int
+        :returns: The approximated number of unique elements observed
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
