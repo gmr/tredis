@@ -41,7 +41,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Sorted Sets  | 0 of 21  |
 +--------------+----------+
-| Strings      | 3 of 23  |
+| Strings      | 23 of 23 |
 +--------------+----------+
 | Transactions | 0 of 5   |
 +--------------+----------+

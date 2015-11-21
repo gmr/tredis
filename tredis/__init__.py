@@ -29,6 +29,8 @@ from tredis import sortedsets
 from tredis import strings
 from tredis import transactions
 
+from tredis.strings import BITOP_AND, BITOP_OR, BITOP_XOR, BITOP_NOT
+
 __version__ = '0.2.0'
 
 LOGGER = logging.getLogger(__name__)
@@ -43,6 +45,8 @@ DEFAULT_PORT = 6379
 
 DEFAULT_DB = 0
 """The default database number to use"""
+
+
 
 
 # Python 2 support for ascii()

@@ -1,8 +1,6 @@
 Supported Commands
 ==================
-The following table summarizes the number of commands supported by category. Categories
-that are partially implemented enumerate the supported commands below. Implemented
-commands are documented in the :py:class:`RedisClient <tredis.RedisClient>` documentation.
+The following table summarizes the number of commands supported by category:
 
 +--------------+----------+---------------+
 | Category     | Count    | Version Added |
@@ -31,11 +29,7 @@ commands are documented in the :py:class:`RedisClient <tredis.RedisClient>` docu
 +--------------+----------+---------------+
 | Sorted Sets  | 0 of 21  | —             |
 +--------------+----------+---------------+
-| Strings      | 3 of 23  | 0.1.0 [1]_    |
+| Strings      | 23 of 23 | 0.2.0         |
 +--------------+----------+---------------+
 | Transactions | 0 of 5   | —             |
 +--------------+----------+---------------+
-
-.. rubric:: Partial Category Implementations
-
-.. [1] **Strings**: :py:meth:`get <tredis.RedisClient.get>`, :py:meth:`incr <tredis.RedisClient.incr>`, :py:meth:`set <tredis.RedisClient.set>`
