@@ -13,7 +13,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Hashes       | 0 of 15  | —             |
 +--------------+----------+---------------+
-| HyperLogLog  | 0 of 3   | —             |
+| HyperLogLog  | 3 of 3   | 0.2.0         |
 +--------------+----------+---------------+
 | Keys         | 22 of 22 | 0.1.0         |
 +--------------+----------+---------------+

@@ -25,7 +25,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Hashes       | 0 of 15  |
 +--------------+----------+
-| HyperLogLog  | 0 of 3   |
+| HyperLogLog  | 3 of 3   |
 +--------------+----------+
 | Keys         | 22 of 22 |
 +--------------+----------+
