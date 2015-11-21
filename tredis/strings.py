@@ -569,7 +569,7 @@ class StringsMixin(object):
            a string value, or holds a small string value, Redis needs to
            allocate all intermediate memory which can block the server for some
            time. On a 2010 MacBook Pro, setting bit number 2 :sup:`32` -1
-           (512MB allocation) takes ~300ms, setting bit number 2:sup:`30` -1
+           (512MB allocation) takes ~300ms, setting bit number 2 :sup:`30` -1
            (128MB allocation) takes ~80ms, setting bit number 2 :sup:`28` -1
            (32MB allocation) takes ~30ms and setting bit number 2 :sup:`26` -1
            (8MB allocation) takes ~8ms. Note that once this first allocation is
