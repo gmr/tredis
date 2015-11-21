@@ -2,7 +2,7 @@ TRedis
 ======
 An asynchronous Redis client for Tornado
 
-|Version| |Downloads| |Status| |Coverage| |CodeClimate| |PythonVersions|
+|Version| |Downloads| |PythonVersions| |Status| |Coverage| |CodeClimate| |QuantifiedCode|
 
 Documentation is available at `tredis.readthedocs.org <http://tredis.readthedocs.org>`_.
 
@@ -97,6 +97,9 @@ created the pipeline, execute it with ``tredis.RedisClient.pipeline_execute()``:
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis
 
+.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/tredis.svg?
+   :target: https://github.com/gmr/tredis
+
 .. |Status| image:: https://img.shields.io/travis/gmr/tredis.svg?
    :target: https://travis-ci.org/gmr/tredis
 
@@ -106,8 +109,11 @@ created the pipeline, execute it with ``tredis.RedisClient.pipeline_execute()``:
 .. |Downloads| image:: https://img.shields.io/pypi/dm/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis
 
-.. |CodeClimate| image:: https://img.shields.io/codeclimate/github/gmr/tredis.svg?
+.. |CodeClimate| image:: https://codeclimate.com/github/gmr/tredis/badges/gpa.svg
    :target: https://codeclimate.com/github/gmr/tredis
+   :alt: Code Climate
 
-.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/tredis.svg?
-   :target: https://github.com/gmr/tredis
+.. |QuantifiedCode| image:: https://www.quantifiedcode.com/api/v1/project/cbf1bf1b78cd441ba6078cfada0a8a9a/badge.svg
+   :target: https://www.quantifiedcode.com/app/project/cbf1bf1b78cd441ba6078cfada0a8a9a
+   :alt: Code issues
+
