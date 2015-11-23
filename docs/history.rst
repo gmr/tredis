@@ -1,6 +1,10 @@
 Version History
 ===============
 
+- 0.2.1 - released *2015-11-23*
+
+  - Add hiredis to the requirements
+
 - 0.2.0 - released *2015-11-23*
 
   - Add per-command execution locking, preventing errors with concurrency in command processing
