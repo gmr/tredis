@@ -12,7 +12,8 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: Implementation :: CPython'
                'Topic :: Communications', 'Topic :: Internet',
-               'Topic :: Software Development :: Libraries']
+               'Topic :: Software Development :: Libraries',
+               'Topic :: Database']
 
 requirements = ['tornado>4.0']
 tests_require = ['nose', 'mock', 'codecov', 'coverage']
