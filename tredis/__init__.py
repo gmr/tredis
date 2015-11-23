@@ -153,6 +153,8 @@ class RedisClient(server.ServerMixin,
            additional memory used will be at max the amount needed to queue the
            replies for this 10k commands.
 
+        :raises: :exc:`~tredis.exceptions.SubscribedError`
+
         """
         self._pipeline = True
         self._pipeline_commands = []
@@ -163,14 +165,16 @@ class RedisClient(server.ServerMixin,
         from the Redis server
 
         :rtype: list
-        :raises: :exc:`ValueError`
+        :raises: :exc:`ValueError`, :exc:`~tredis.exceptions.SubscribedError`
 
         """
+        future = super(RedisClient, self).pipeline_execute()
+
         commands = len(self._pipeline_commands)
         if not commands:
             raise ValueError('Empty pipeline')
 
-        future = concurrent.TracebackFuture()
+        future = future or concurrent.TracebackFuture()
         pipeline_responses = _PipelineResponses()
 
         def on_response(response):
@@ -276,15 +280,18 @@ class RedisClient(server.ServerMixin,
         :param mixed expectation: Optional response expectation
 
         :rtype: :class:`~tornado.concurrent.Future`
+        :raises: :exc:`~tredis.exceptions.SubscribedError`
 
         """
+        future = super(RedisClient, self)._execute(parts, expectation=None,
+                                                   format_callback=None)
         LOGGER.debug('_execute (%r, %r, %r)',
                      parts, expectation, format_callback)
         command = self._build_command(parts)
         if self._pipeline:
             return self._pipeline_add(command, expectation, format_callback)
 
-        future = concurrent.TracebackFuture()
+        future = future or concurrent.TracebackFuture()
 
         def on_ready(connection_ready):
             """Invoked once the connection has been established
