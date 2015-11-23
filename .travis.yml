@@ -23,7 +23,7 @@ deploy:
     tags: true
     all_branches: true
   password:
-    not-set
+    secure: "SiBwS2Ebl2+zMKrFMOW5VtpO3lOWEVK8+Jg+DMsGcNTmPEnoVWPz2qNAFpS0QWkkhqe4rhx/MBlrVt7N68WEAg4iAvLF9oCe837w56vQb+L8l8Opo496KyCrfyy5iVfDXmYrhsNRtOtyaj+b/14IcjOR6qFo07Iz/wirx7mhUO6/cC8e1iIes8B5sqmSwtZ9jy+I1881mEhILd+0TZwCAMITymLuqhg0shnE3VbydqGNs2H7uypqXemAq3pG7fMxGA0NRNskBlEAJqwuqiRKJeeWrD459uYcFXAqn5NkRYyLSSCIzTMeSL190qIJyVeJSPrVAdv9ZNeI1eRapwUc0H0wUJIHPEe2T+wyNCF499Yy9o6m7htnDeML2H62Qv0HNJUmI9KZvVfyv55Kjd16nP9AcIUAGuLzYjaphOGn42GWr2jiwG9Ujpik1rSaBQN79JEUxDyvZ9WLgPDgjeSUjatCDoeH/LcKohgpUZfQMXadkygb7ZsVMD+9VC5bAjM/06SCOdK4pUjxKCcaFPMUcduw6bHvxfGJLYah1YqlLWgrPhVX69a60irSxSps2w/nw/U37gmYCfpaRFAuVHIDl1bFpCHv5/7k2LSdrg1c+Oa49fkZ/wkpFHh0VTh6VEkNg0zGbgJdsn6jMvogmGTPyowstxlNDKZQU6GcuqDhzJU="
 cache:
   directories:
     - $HOME/.pip-cache/
