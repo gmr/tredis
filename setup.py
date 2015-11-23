@@ -18,7 +18,7 @@ requirements = ['tornado>4.0']
 tests_require = ['nose', 'mock', 'codecov', 'coverage']
 
 setuptools.setup(name='tredis',
-                 version='0.1.0',
+                 version='0.2.0',
                  description='An asynchronous Redis client for Tornado',
                  long_description=open('README.rst').read(),
                  author='Gavin M. Roy',
