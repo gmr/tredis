@@ -156,6 +156,8 @@ class RedisClient(server.ServerMixin,
         :raises: :exc:`~tredis.exceptions.SubscribedError`
 
         """
+        if hasattr(super(RedisClient, self), 'pipeline_start'):
+            super(RedisClient, self).pipeline_start()
         self._pipeline = True
         self._pipeline_commands = []
 
@@ -168,13 +170,16 @@ class RedisClient(server.ServerMixin,
         :raises: :exc:`ValueError`, :exc:`~tredis.exceptions.SubscribedError`
 
         """
-        future = super(RedisClient, self).pipeline_execute()
-
         commands = len(self._pipeline_commands)
         if not commands:
             raise ValueError('Empty pipeline')
 
-        future = future or concurrent.TracebackFuture()
+        if hasattr(super(RedisClient, self), 'pipeline_execute'):
+            future = super(RedisClient, self).pipeline_execute() or \
+                     concurrent.TracebackFuture()
+        else:
+            future = concurrent.TracebackFuture()
+
         pipeline_responses = _PipelineResponses()
 
         def on_response(response):
@@ -283,15 +288,20 @@ class RedisClient(server.ServerMixin,
         :raises: :exc:`~tredis.exceptions.SubscribedError`
 
         """
-        future = super(RedisClient, self)._execute(parts, expectation=None,
-                                                   format_callback=None)
         LOGGER.debug('_execute (%r, %r, %r)',
                      parts, expectation, format_callback)
+
         command = self._build_command(parts)
         if self._pipeline:
             return self._pipeline_add(command, expectation, format_callback)
 
-        future = future or concurrent.TracebackFuture()
+        if hasattr(super(RedisClient, self), '_execute'):
+            future = super(RedisClient,
+                           self)._execute(parts, expectation=None,
+                                          format_callback=None) or \
+                     concurrent.TracebackFuture()
+        else:
+            future = concurrent.TracebackFuture()
 
         def on_ready(connection_ready):
             """Invoked once the connection has been established
