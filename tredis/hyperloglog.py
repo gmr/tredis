@@ -26,6 +26,8 @@ class HyperLogLogMixin(object):
         For an introduction to HyperLogLog data structure check
         :meth:`~tredis.RedisClient.pfcount`.
 
+        .. versionadded:: 0.2.0
+
         .. note:: **Time complexity**: ``O(1)`` to add every element.
 
         :param key: The key to add the elements to
@@ -66,6 +68,8 @@ class HyperLogLogMixin(object):
            latest computed cardinality for caching purposes. So
            :meth:`~tredis.RedisCount.pfcount` is technically a write command.
 
+        .. versionadded:: 0.2.0
+
         .. note:: **Time complexity**: ``O(1)`` with every small average
            constant times when called with a single key. ``O(N)`` with ``N``
            being the number of keys, and much bigger constant times, when
@@ -89,11 +93,13 @@ class HyperLogLogMixin(object):
         which is created if does not exist (defaulting to an empty
         HyperLogLog).
 
+        .. versionadded:: 0.2.0
+
         .. note:: **Time complexity**: ``O(N)`` to merge ``N`` HyperLogLogs,
         but with high constant times.
 
-        :param dest_keys: The destination key
-        :type dest_keys: :class:`str`, :class:`bytes`
+        :param dest_key: The destination key
+        :type dest_key: :class:`str`, :class:`bytes`
         :param keys: One or more keys
         :type keys: :class:`str`, :class:`bytes`
         :rtype: bool

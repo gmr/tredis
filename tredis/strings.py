@@ -37,10 +37,10 @@ class StringsMixin(object):
         set as an empty string, so :meth:`~tredis.RedisClient.append` will be
         similar to :meth:`~tredis.RedisClient.set` in this special case.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``. The amortized time complexity is
-           ``O(1)`` assuming the appended value is small and the already
+        .. note:: **Time complexity**: ``O(1)``. The amortized time complexity
+           is ``O(1)`` assuming the appended value is small and the already
            present value is of any size, since the dynamic string library used
            by Redis will double the free space available on every reallocation.
 
@@ -70,9 +70,9 @@ class StringsMixin(object):
         Non-existent keys are treated as empty strings, so the command will
         return zero.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)``
+        .. note:: **Time complexity**: ``O(N)``
 
         :param key: The key to get
         :type key: :class:`str`, :class:`bytes`
@@ -121,9 +121,9 @@ class StringsMixin(object):
         The same holds true for non-existent keys, that are considered as a
         stream of zero bytes up to the length of the longest string.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)``
+        .. note:: **Time complexity**: ``O(N)``
 
         :param bytes operation: The operation to perform
         :param dest_key: The key to store the bitwise operation results to
@@ -178,9 +178,9 @@ class StringsMixin(object):
 
         Non-existent keys are treated as empty strings.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)``
+        .. note:: **Time complexity**: ``O(N)``
 
         :param key: The key to get
         :type key: :class:`str`, :class:`bytes`
@@ -213,9 +213,9 @@ class StringsMixin(object):
         See :meth:`~tredis.RedisClient.incr` for extra information on
         increment/decrement operations.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to decrement
         :type key: :class:`str`, :class:`bytes`
@@ -236,9 +236,9 @@ class StringsMixin(object):
         See :meth:`~tredis.RedisClient.incr` for extra information on
         increment/decrement operations.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to decrement
         :type key: :class:`str`, :class:`bytes`
@@ -256,9 +256,7 @@ class StringsMixin(object):
         at key is not a string, because :meth:`~tredis.RedisClient.get` only
         handles string values.
 
-        .. note::
-
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to get
         :type key: :class:`str`, :class:`bytes`
@@ -276,9 +274,9 @@ class StringsMixin(object):
         be an empty string, so offset is always out of range and the value is
         also assumed to be a contiguous space with 0 bits.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to get the bit from
         :type key: :class:`str`, :class:`bytes`
@@ -297,10 +295,10 @@ class StringsMixin(object):
         be an empty string, so offset is always out of range and the value is
         also assumed to be a contiguous space with 0 bits.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)`` where ``N`` is the length of the
-           returned string. The complexity is ultimately determined by the
+        .. note:: **Time complexity**: ``O(N)`` where ``N`` is the length of
+           the returned string. The complexity is ultimately determined by the
            returned length, but because creating a substring from an existing
            string is very cheap, it can be considered ``O(1)`` for small
            strings.
@@ -319,9 +317,9 @@ class StringsMixin(object):
         """Atomically sets key to value and returns the old value stored at
         key. Returns an error when key exists but does not hold a string value.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to remove
         :type key: :class:`str`, :class:`bytes`
@@ -349,9 +347,7 @@ class StringsMixin(object):
         values that actually hold an integer, there is no overhead for storing
         the string representation of the integer.
 
-        .. note::
-
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to increment
         :type key: :class:`str`, :class:`bytes`
@@ -371,9 +367,9 @@ class StringsMixin(object):
         See :meth:`~tredis.RedisClient.incr` for extra information on
         increment/decrement operations.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to increment
         :type key: :class:`str`, :class:`bytes`
@@ -409,9 +405,9 @@ class StringsMixin(object):
         The precision of the output is fixed at 17 digits after the decimal
         point regardless of the actual internal precision of the computation.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to increment
         :type key: :class:`str`, :class:`bytes`
@@ -428,10 +424,10 @@ class StringsMixin(object):
         not hold a string value or does not exist, the special value nil is
         returned. Because of this, the operation never fails.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)`` where ``N`` is the number of keys to
-           retrieve.
+        .. note:: **Time complexity**: ``O(N)`` where ``N`` is the number of
+           keys to retrieve.
 
         :param keys: One or more keys as keyword arguments to the function
         :type keys: :class:`str`, :class:`bytes`
@@ -452,10 +448,10 @@ class StringsMixin(object):
         at once. It is not possible for clients to see that some of the keys
         were updated while others are unchanged.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)`` where ``N`` is the number of keys to
-           set.
+        .. note:: **Time complexity**: ``O(N)`` where ``N`` is the number of
+           keys to set.
 
         :param dict mapping: A mapping of key/value pairs to set
         :rtype: bool
@@ -481,10 +477,10 @@ class StringsMixin(object):
         at once. It is not possible for clients to see that some of the keys
         were updated while others are unchanged.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(N)`` where ``N`` is the number of keys to
-           set.
+        .. note:: **Time complexity**: ``O(N)`` where ``N`` is the number of
+           keys to set.
 
         :param dict mapping: A mapping of key/value pairs to set
         :rtype: bool
@@ -501,9 +497,9 @@ class StringsMixin(object):
         :meth:`~tredis.RedisClient.psetex` with the sole difference that the
         expire time is specified in milliseconds instead of seconds.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to set
         :type key: :class:`str`, :class:`bytes`
@@ -526,9 +522,7 @@ class StringsMixin(object):
         If the value is not one of :class:`str`, :class:`bytes`, or
         :class:`int`, a :exc:`ValueError` will be raised.
 
-        .. note::
-
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to remove
         :type key: :class:`str`, :class:`bytes`
@@ -576,9 +570,9 @@ class StringsMixin(object):
            done, subsequent calls to :meth:`~tredis.RedisClient.setbit` for the
            same key will not have the allocation overhead.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to get the bit from
         :type key: :class:`str`, :class:`bytes`
@@ -606,9 +600,9 @@ class StringsMixin(object):
 
         An error is returned when seconds is invalid.
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to set
         :type key: :class:`str`, :class:`bytes`
@@ -627,9 +621,9 @@ class StringsMixin(object):
         value, no operation is performed. :meth:`~tredis.RedisClient.setnx` is
         short for "SET if Not eXists".
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to set
         :type key: :class:`str`, :class:`bytes`
@@ -665,10 +659,12 @@ class StringsMixin(object):
            :meth:`~tredis.RedisClient.setrange` for the same key will not have
            the allocation overhead.
 
-        .. note:: **Time complexity**: ``O(1)``, not counting the time taken to copy
-           the new string in place. Usually, this string is very small so the
-           amortized complexity is ``O(1)``. Otherwise, complexity is ``O(M)``
-           with ``M`` being the length of the value argument.
+        .. versionadded:: 0.2.0
+
+        .. note:: **Time complexity**: ``O(1)``, not counting the time taken to
+           copy the new string in place. Usually, this string is very small so
+           the amortized complexity is ``O(1)``. Otherwise, complexity is
+           ``O(M)`` with ``M`` being the length of the value argument.
 
         :param key: The key to get the bit from
         :type key: :class:`str`, :class:`bytes`
@@ -685,9 +681,9 @@ class StringsMixin(object):
         """Returns the length of the string value stored at key. An error is
         returned when key holds a non-string value
 
-        .. note::
+        .. versionadded:: 0.2.0
 
-           **Time complexity**: ``O(1)``
+        .. note:: **Time complexity**: ``O(1)``
 
         :param key: The key to set
         :type key: :class:`str`, :class:`bytes`
