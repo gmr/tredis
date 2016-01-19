@@ -18,7 +18,7 @@ class AsyncTestCase(testing.AsyncTestCase):
         super(AsyncTestCase, self).setUp()
         self.client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                          int(os.getenv('REDIS_PORT', '6379')),
-                                         int(os.getenv('REDIS_DB', '0')))
+                                         int(os.getenv('REDIS_DB', '12')))
         self._execute_result = None
 
     def expiring_set(self, key, value, expiration=None, nx=None, xx=None):

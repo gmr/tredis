@@ -34,14 +34,6 @@ class ConnectTests(base.AsyncTestCase):
             yield client.get('foo')
 
     @testing.gen_test
-    def test_bad_connect_in_pipeline_raises_exception(self):
-        client = tredis.RedisClient(str(uuid.uuid4()))
-        with self.assertRaises(exceptions.ConnectError):
-            client.pipeline_start()
-            client.get('foo')
-            yield client.pipeline_execute()
-
-    @testing.gen_test
     def test_bad_db_raises_exception(self):
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                     int(os.getenv('REDIS_PORT', '6379')),

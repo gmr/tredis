@@ -47,8 +47,6 @@ DEFAULT_DB = 0
 """The default database number to use"""
 
 
-
-
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
     from tredis.compat import ascii
@@ -102,8 +100,6 @@ class RedisClient(server.ServerMixin,
         self._port = port
         self._ioloop = ioloop.IOLoop.current()
         self._on_close = on_close
-        self._pipeline = False
-        self._pipeline_commands = []
         self._pool = []
         self._reader = hiredis.Reader()
         self._stream = None
@@ -118,134 +114,6 @@ class RedisClient(server.ServerMixin,
         if not self._stream:
             raise exceptions.ConnectionError('Not connected')
         self._stream.close()
-
-    def pipeline_start(self):
-        """Start a command pipeline. The pipeline will only run when you invoke
-        :meth:`~tredis.RedisClient.pipeline_execute`.
-
-        .. code-block:: python
-           :caption: Pipeline Example
-
-           # Start the pipeline
-           client.pipeline_start()
-
-           client.set('foo1', 'bar1')
-           client.set('foo2', 'bar2')
-           client.set('foo3', 'bar3')
-
-           # Execute the pipeline
-           responses = yield client.pipeline_execute()
-
-        .. warning:: Yielding after calling
-           :meth:`~tredis.RedisClient.pipeline_start` and before calling
-           :meth:`~tredis.RedisClient.pipeline_execute` can cause asynchronous
-           request scope issues, as the client does not protect against other
-           asynchronous requests from populating the pipeline. The only way to
-           prevent this from happening is to make all pipeline additions inline
-           without yielding to the :class:`~tornado.ioloop.IOLoop`.
-
-        .. note:: While the client sends commands using pipelining, the server
-           will be forced to queue the replies, using memory. So if you need
-           to send a lot of commands with pipelining, it is better to send
-           them as batches having a reasonable number, for instance 10k
-           commands, read the replies, and then send another 10k commands
-           again, and so forth. The speed will be nearly the same, but the
-           additional memory used will be at max the amount needed to queue the
-           replies for this 10k commands.
-
-        :raises: :exc:`~tredis.exceptions.SubscribedError`
-
-        """
-        if hasattr(super(RedisClient, self), 'pipeline_start'):
-            super(RedisClient, self).pipeline_start()
-        self._pipeline = True
-        self._pipeline_commands = []
-
-    def pipeline_execute(self):
-        """Execute the pipeline created by issuing commands after invoking
-        :meth:`~tredis.RedisClient.pipeline_start`. Returns a list of responses
-        from the Redis server
-
-        :rtype: list
-        :raises: :exc:`ValueError`, :exc:`~tredis.exceptions.SubscribedError`
-
-        """
-        commands = len(self._pipeline_commands)
-        if not commands:
-            raise ValueError('Empty pipeline')
-
-        if hasattr(super(RedisClient, self), 'pipeline_execute'):
-            future = super(RedisClient, self).pipeline_execute() or \
-                     concurrent.TracebackFuture()
-        else:
-            future = concurrent.TracebackFuture()
-
-        pipeline_responses = _PipelineResponses()
-
-        def on_response(response):
-            """Process the response future
-
-            :param response: The response future
-            :type response: :class:`tornado.concurrent.Future`
-
-            """
-            exc = response.exception()
-            if exc:
-                pipeline_responses.append(exc)
-            else:
-                pipeline_responses.append(response.result())
-
-            index = len(pipeline_responses.values)
-
-            if index == len(self._pipeline_commands):
-                self._pipeline = False
-                self._pipeline_commands = []
-                future.set_result(pipeline_responses.values)
-            else:
-                response_future = concurrent.TracebackFuture()
-                self._ioloop.add_future(response_future, on_response)
-                self._get_response(response_future,
-                                   self._pipeline_commands[index][1],
-                                   self._pipeline_commands[index][2])
-
-        def on_ready(connection_ready):
-            """Invoked once the connection has been established
-
-            :param connection_ready: The connection future
-            :type connection_ready: tornado.concurrent.Future
-
-            """
-            connection_error = connection_ready.exception()
-            if connection_error:
-                return future.set_exception(connection_error)
-
-            def on_written():
-                """Invoked when the command has been written to the socket"""
-                response_future = concurrent.TracebackFuture()
-                self._ioloop.add_future(response_future, on_response)
-                self._get_response(response_future,
-                                   self._pipeline_commands[0][1],
-                                   self._pipeline_commands[0][2])
-
-            pipeline = b''.join([cmd[0] for cmd in self._pipeline_commands])
-            self._stream.write(pipeline, callback=on_written)
-
-        def on_locked(lock):
-            """Invoked once the lock has been acquired.
-
-            :param tornado.concurrent.Future lock: The lock future
-
-            """
-            LOGGER.debug('Executing pipeline with lock %r', lock)
-            self._maybe_connect(on_ready)
-
-        # Start executing once locked
-        lock_future = self._busy.acquire()
-        self._ioloop.add_future(lock_future, on_locked)
-
-        # Release the lock when the future is complete
-        self._ioloop.add_future(future, lambda r: self._busy.release())
-        return future
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
@@ -292,16 +160,7 @@ class RedisClient(server.ServerMixin,
                      parts, expectation, format_callback)
 
         command = self._build_command(parts)
-        if self._pipeline:
-            return self._pipeline_add(command, expectation, format_callback)
-
-        if hasattr(super(RedisClient, self), '_execute'):
-            future = super(RedisClient,
-                           self)._execute(parts, expectation=None,
-                                          format_callback=None) or \
-                     concurrent.TracebackFuture()
-        else:
-            future = concurrent.TracebackFuture()
+        future = concurrent.TracebackFuture()
 
         def on_ready(connection_ready):
             """Invoked once the connection has been established
@@ -434,16 +293,6 @@ class RedisClient(server.ServerMixin,
             LOGGER.debug('Calling on_close callback: %r', self._on_close)
             self._on_close()
 
-    def _pipeline_add(self, command, expectation, format_callback):
-        """Add a command to execute to the pipeline
-
-        :param bytes command: The command to execute
-        :param mixed expectation: Expectation for response evaluation
-
-        """
-        LOGGER.debug('Adding to pipeline (%r, %r)' % (command, expectation))
-        self._pipeline_commands.append((command, expectation, format_callback))
-
     def _read(self, callback=None):
         """Asynchronously read a number of bytes.
 
@@ -453,25 +302,3 @@ class RedisClient(server.ServerMixin,
         LOGGER.debug('Reading from the stream')
         self._stream.read_bytes(65536, callback, None, True)
 
-
-class _PipelineResponses(object):
-    """Class for returning pipeline responses"""
-
-    def __init__(self):
-        self.values = []
-
-    def __len__(self):
-        """Return the length of the pipeline responses
-
-        :rtype: int
-
-        """
-        return len(self.values)
-
-    def append(self, value):
-        """Add a value to the pipeline response list
-
-        :param mixed value: The value to append
-
-        """
-        self.values.append(value)

@@ -470,23 +470,3 @@ class StringTests(base.AsyncTestCase):
         self.assertTrue(result)
         result = yield self.client.strlen(key)
         self.assertTrue(result, len(value))
-
-
-class PipelineTests(base.AsyncTestCase):
-
-    @testing.gen_test
-    def test_command_pipeline(self):
-        key1, key2, key3, value1, value2, = self.uuid4(5)
-        self.client.pipeline_start()
-        self.client.set(key1, value1, 5)
-        self.client.set(key2, value2, 5)
-        self.client.incr(key3)
-        self.client.incr(key3)
-        self.client.incr(key3)
-        self.client.incr(key3)
-        self.client.get(key1)
-        self.client.get(key2)
-        self.client.get(key3)
-        expectation = [True, True, 1, 2, 3, 4, value1, value2, b'4']
-        response = yield self.client.pipeline_execute()
-        self.assertListEqual(response, expectation)
