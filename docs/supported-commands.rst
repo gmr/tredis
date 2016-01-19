@@ -21,7 +21,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Pub/Sub      | 0 of 6   | —             |
 +--------------+----------+---------------+
-| Scripting    | 0 of 6   | —             |
+| Scripting    | 6 of 6   | 0.3.0         |
 +--------------+----------+---------------+
 | Server       | 0 of 30  | —             |
 +--------------+----------+---------------+

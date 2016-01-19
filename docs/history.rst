@@ -1,6 +1,11 @@
 Version History
 ===============
 
+- 0.3.0 - released *2016-01-18*
+
+  - Remove broken pipelining implementation
+  - Add scripting commands
+
 - 0.2.1 - released *2015-11-23*
 
   - Add hiredis to the requirements

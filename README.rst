@@ -33,7 +33,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Pub/Sub      | 0 of 6   |
 +--------------+----------+
-| Scripting    | 0 of 6   |
+| Scripting    | 6 of 6   |
 +--------------+----------+
 | Server       | 0 of 30  |
 +--------------+----------+
