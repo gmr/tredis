@@ -61,6 +61,79 @@ class ServerMixin(object):
         """
         return self._execute([b'ECHO', message])
 
+    def info(self, section=None):
+        """The INFO command returns information and statistics about the server
+        in a format that is simple to parse by computers and easy to read by
+        humans.
+
+        The optional parameter can be used to select a specific section of
+        information:
+
+            - server: General information about the Redis server
+            - clients: Client connections section
+            - memory: Memory consumption related information
+            - persistence: RDB and AOF related information
+            - stats: General statistics
+            - replication: Master/slave replication information
+            - cpu: CPU consumption statistics
+            - commandstats: Redis command statistics
+            - cluster: Redis Cluster section
+            - keyspace: Database related statistics
+
+        It can also take the following values:
+
+            - all: Return all sections
+            - default: Return only the default set of sections
+
+        When no parameter is provided, the default option is assumed.
+
+        :param str section: Optional
+        :return: dict
+
+        """
+
+        def parse_value(value):
+            """
+
+            :param value:
+            :return:
+
+            """
+            try:
+                if b'.' in value:
+                    return float(value)
+                else:
+                    return int(value)
+            except ValueError:
+                if b',' in value or b'=' in value:
+                    retval = {}
+                    for row in value.split(b','):
+                        key, val = row.rsplit(b'=', 1)
+                        retval[key.decode('utf-8')] = parse_value(val)
+                    return retval
+                return value.decode('utf-8')
+
+        def format_response(value):
+            """Format the response from redis
+
+            :param str value: The return response from redis
+            :rtype: dict
+
+            """
+            info = {}
+            for line in value.splitlines():
+                if line.startswith(b'#'):
+                    continue
+                if b':' in line:
+                    key, value = line.split(b':', 1)
+                    info[key.decode('utf-8')] = parse_value(value)
+            return info
+
+        if section:
+            return self._execute([b'INFO', section],
+                                 format_callback=format_response)
+        return self._execute([b'INFO'], format_callback=format_response)
+
     def ping(self):
         """Returns ``PONG`` if no argument is provided, otherwise return a copy
         of the argument as a bulk. This command is often used to test if a

@@ -38,6 +38,20 @@ class ServerTests(base.AsyncTestCase):
         self.assertEqual(result, value)
 
     @testing.gen_test
+    def test_info_response(self):
+        result = yield self.client.info()
+        self.assertTrue(isinstance(result, dict))
+        for key in ['tcp_port', 'role', 'redis_version', 'redis_mode']:
+            self.assertIn(key, result)
+
+    @testing.gen_test
+    def test_info_server_response(self):
+        result = yield self.client.info('server')
+        self.assertTrue(isinstance(result, dict))
+        for key in ['tcp_port', 'redis_version', 'redis_mode']:
+            self.assertIn(key, result)
+
+    @testing.gen_test
     def test_ping_response(self):
         result = yield self.client.ping()
         self.assertEqual(result, b'PONG')
