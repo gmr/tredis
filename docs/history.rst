@@ -1,9 +1,10 @@
 Version History
 ===============
 
-- Next Version
+- 0.4.0 - released *2016-11-08*
 
-  - Add `Hash commands <http://redis.io/commands#hash>`_
+  - Add `Hash <http://redis.io/commands#hash>`_ commands (13 of 15)
+  - Add `Sorted Sets <http://redis.io/commands#sorted_set>`_ commands (3 of 21)
 
 - 0.3.0 - released *2016-01-18*
 
