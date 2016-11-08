@@ -4,7 +4,7 @@
 class SortedSetsMixin(object):
     """Redis Sorted Set Commands Mixin"""
 
-    def zadd(self, key, *members, xx=False, nx=False, ch=False, incr=False):
+    def zadd(self, key, *members, **kwargs):
         """Adds all the specified members with the specified scores to the
         sorted set stored at key. It is possible to specify multiple score /
         member pairs. If a specified member is already a member of the sorted
@@ -54,14 +54,18 @@ class SortedSetsMixin(object):
         :type key: :class:`str`, :class:`bytes`
         :param members: Elements to add
         :type members: :class:`dict`, :class:`str`, :class:`bytes`
-        :param bool xx: Only update elements that already exist
-        :param bool nx: Don't update already existing elements
-        :param bool ch: Return the number of changed elements
-        :param bool incr: Increment the score of an element
+        :keyword bool xx: Only update elements that already exist
+        :keyword bool nx: Don't update already existing elements
+        :keyword bool ch: Return the number of changed elements
+        :keyword bool incr: Increment the score of an element
         :rtype: int, :class:`str`, :class:`bytes`
         :returns: Number of elements changed, or the new score if incr is set
         :raises: :exc:`~tredis.exceptions.RedisError`
         """
+        xx = kwargs.pop('xx', False)
+        nx = kwargs.pop('nx', False)
+        ch = kwargs.pop('ch', False)
+        incr = kwargs.pop('incr', False)
         command = [b'ZADD', key]
         if xx:
             command += ['XX']
