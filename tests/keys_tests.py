@@ -147,12 +147,12 @@ class KeyCommandTests(base.AsyncTestCase):
     @testing.gen_test
     def test_keys(self):
         yield self.client.select(3)
-        prefix = 'keys-test'
+        prefix = self.uuid4()
         keys = ['{}-{}'.format(prefix, str(uuid.uuid4())).encode('ascii')
                 for i in range(0, 10)]
         for key in keys:
             yield self.expiring_set(key, str(uuid.uuid4()))
-        result = yield self.client.keys('{}*'.format(prefix))
+        result = yield self.client.keys('{}-*'.format(prefix))
         self.assertListEqual(sorted(result), sorted(keys))
 
     @testing.gen_test
@@ -258,6 +258,9 @@ class KeyCommandTests(base.AsyncTestCase):
     @testing.gen_test
     def test_randomkey(self):
         yield self.client.select(4)
+        keys = yield self.client.keys('*')
+        self.client.delete(*keys)
+
         keys = self.uuid4(10)
         for key in list(keys):
             yield self.expiring_set(key, str(uuid.uuid4()))
