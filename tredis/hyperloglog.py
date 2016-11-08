@@ -95,8 +95,10 @@ class HyperLogLogMixin(object):
 
         .. versionadded:: 0.2.0
 
-        .. note:: **Time complexity**: ``O(N)`` to merge ``N`` HyperLogLogs,
-        but with high constant times.
+        .. note::
+
+           **Time complexity**: ``O(N)`` to merge ``N`` HyperLogLogs, but
+           with high constant times.
 
         :param dest_key: The destination key
         :type dest_key: :class:`str`, :class:`bytes`
