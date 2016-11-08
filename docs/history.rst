@@ -1,6 +1,10 @@
 Version History
 ===============
 
+- Next Version
+
+  - Add `Hash commands <http://redis.io/commands#hash>`_
+
 - 0.3.0 - released *2016-01-18*
 
   - Remove broken pipelining implementation
