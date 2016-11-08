@@ -23,7 +23,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Geo          | 0 of 6   |
 +--------------+----------+
-| Hashes       | 0 of 15  |
+| Hashes       | 13 of 15 |
 +--------------+----------+
 | HyperLogLog  | 3 of 3   |
 +--------------+----------+

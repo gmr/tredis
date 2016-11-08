@@ -11,7 +11,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Geo          | 0 of 6   | —             |
 +--------------+----------+---------------+
-| Hashes       | 0 of 15  | —             |
+| Hashes       | 13 of 15 | 0.4.0         |
 +--------------+----------+---------------+
 | HyperLogLog  | 3 of 3   | 0.2.0         |
 +--------------+----------+---------------+
