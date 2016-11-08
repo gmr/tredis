@@ -138,6 +138,8 @@ class RedisClient(server.ServerMixin,
             return self._encode_resp(value.encode('utf-8'))
         elif isinstance(value, int):
             return self._encode_resp(ascii(value).encode('ascii'))
+        elif isinstance(value, float):
+            return self._encode_resp(ascii(value).encode('ascii'))
         elif isinstance(value, list):
             output = [b'*', ascii(len(value)).encode('ascii'), CRLF]
             for item in value:
