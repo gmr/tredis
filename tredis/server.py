@@ -47,7 +47,7 @@ class ServerMixin(object):
                 future.set_result(response.result())
 
         execute_future = self._execute([b'AUTH', password], b'OK')
-        self._ioloop.add_future(execute_future, on_response)
+        self.io_loop.add_future(execute_future, on_response)
         return future
 
     def echo(self, message):
