@@ -521,7 +521,6 @@ class MigrationTests(base.AsyncTestCase):
 
     def setUp(self):
         super(MigrationTests, self).setUp()
-        self.redis_host = os.getenv('REDIS_HOST', 'localhost')
         self.redis2_host = os.getenv('REDIS2_HOST', 'localhost')
         self.redis2_port = int(os.getenv('REDIS2_PORT', '6379'))
 
