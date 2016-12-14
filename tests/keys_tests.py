@@ -118,8 +118,8 @@ class KeyCommandTests(base.AsyncTestCase):
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
 
-        timestamp = int(time.time()) + 5
-        result = yield self.client.expireat(key, timestamp)
+        timestamp = (yield self.client.time()) + 5.0
+        result = yield self.client.expireat(key, int(timestamp))
         self.assertTrue(result)
         result = yield self.client.ttl(key)
         self.assertLessEqual(result, 5)
@@ -232,10 +232,12 @@ class KeyCommandTests(base.AsyncTestCase):
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
-        timestamp = (int(time.time()) + 5) * 1000
-        result = yield self.client.pexpireat(key, timestamp)
+
+        timestamp = (yield self.client.time()) + 5.0
+        result = yield self.client.pexpireat(key, int(timestamp * 1000.0))
         self.assertTrue(result)
         result = yield self.client.ttl(key)
+
         self.assertLessEqual(result, 5)
         self.assertGreater(result, 0)
 

@@ -35,7 +35,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Scripting    | 6 of 6   |
 +--------------+----------+
-| Server       | 6 of 30  |
+| Server       | 7 of 30  |
 +--------------+----------+
 | Sets         | 15 of 15 |
 +--------------+----------+

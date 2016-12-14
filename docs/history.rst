@@ -1,6 +1,10 @@
 Version History
 ===============
 
+- Next Release
+
+  - Add `TIME <https://redis.io/commands/time>`_ command
+
 - 0.5.0 - released *2016-11-08*
 
   - Add `Hash <http://redis.io/commands#hash>`_ commands (13 of 15)
