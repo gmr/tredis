@@ -3,6 +3,7 @@ Version History
 
 - Next Release
 
+  - Locate master and reconnect when a ``READONLY`` response is received
   - Add `TIME <https://redis.io/commands/time>`_ command
 
 - 0.5.0 - released *2016-11-08*

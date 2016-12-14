@@ -181,6 +181,22 @@ class _Connection(object):
 
         self.io_loop.add_future(connect_future, on_connected)
 
+    def _reconnect(self, host, port, callback):
+        """Reconnect to a new redis instance.
+
+        :param str host: host to connect to
+        :param str|int port: port number to connect to
+        :param callback: callable to invoke when the connection
+            is finished.
+
+        The *callback* is passed to :meth:`._maybe_connect`
+
+        """
+        self.close()
+        self._stream = None
+        self.host, self.port = host, int(port)
+        self._maybe_connect(callback)
+
     def _on_closed(self):
         """Invoked when the connection is closed"""
         LOGGER.error('Redis conncetion closed')
@@ -201,7 +217,7 @@ class _Connection(object):
             invoked to extract the result from the redis response.
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
 
 class RedisClient(_Connection,
@@ -248,6 +264,7 @@ class RedisClient(_Connection,
         self._buffer = bytes()
         self._busy = locks.Lock()
         self._reader = hiredis.Reader()
+        self._current_command = None
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
@@ -301,7 +318,7 @@ class RedisClient(_Connection,
         def on_locked(_):
             """Invoked once the lock has been acquired."""
             LOGGER.debug('Executing %r (%r)', command, expectation)
-            self._current_op = command
+            self._current_command = command
             self.write_command(command, future, expectation=expectation,
                                format_callback=format_callback)
 
@@ -314,18 +331,47 @@ class RedisClient(_Connection,
         return future
 
     def _get_response(self, future, expectation=None, format_callback=None):
-        def on_data(data):
-            LOGGER.debug('Read %r', data)
-            self._reader.feed(data)
-            self._get_response(future, expectation=expectation,
+
+        def after_reconnected(f):
+            if f.exception():
+                return future.set_exception(f.exception())
+
+            self.write_command(self._current_command, future,
+                               expectation=expectation,
                                format_callback=format_callback)
+
+        def on_replication_info(f):
+            if f.exception():
+                return future.set_exception(f.exception())
+
+            master_host, master_port = None, None
+            for line in f.result().decode('ASCII').splitlines():
+                if line.startswith('master_host'):
+                    _, _, master_host = line.partition(':')
+                elif line.startswith('master_port'):
+                    _, _, master_port = line.partition(':')
+
+            if master_host and master_port:
+                self._reconnect(master_host, master_port, after_reconnected)
+            else:
+                future.set_exception(exceptions.ConnectError(
+                    'master host or port missing from replication info'))
 
         response = self._reader.gets()
         if response is not False:
             if isinstance(response, hiredis.ReplyError):
-                future.set_exception(exceptions.RedisError(response))
+                if response.args[0].startswith('READONLY '):
+                    LOGGER.debug('command performed against readonly '
+                                 'replica, finding master')
+                    new_future = concurrent.TracebackFuture()
+                    self.io_loop.add_future(new_future, on_replication_info)
+                    self.write_command(b'INFO REPLICATION\r\n', new_future)
+                else:
+                    future.set_exception(exceptions.RedisError(response))
+
             elif format_callback is not None:
                 future.set_result(format_callback(response))
+
             elif expectation is not None:
                 if isinstance(expectation, int) and expectation > 1:
                     future.set_result(response == expectation or response)
@@ -333,5 +379,13 @@ class RedisClient(_Connection,
                     future.set_result(response == expectation)
             else:
                 future.set_result(response)
+
         else:
+
+            def on_data(data):
+                LOGGER.debug('Read %r', data)
+                self._reader.feed(data)
+                self._get_response(future, expectation=expectation,
+                                   format_callback=format_callback)
+
             self.read_bytes(on_data)
