@@ -4,3 +4,10 @@ redis:
   image: gavinmroy/alpine-redis:latest
   ports:
     - 6379
+
+redis-slave:
+  image: gavinmroy/alpine-redis:latest
+  ports:
+    - 6379
+  links:
+    - redis

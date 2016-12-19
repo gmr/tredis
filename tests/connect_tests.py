@@ -61,15 +61,6 @@ class ConnectTests(base.AsyncTestCase):
         on_close.assert_called_once_with()
 
     @testing.gen_test
-    def test_connection_error_raised_on_write_post_kill(self):
-        result = yield self.client.set('foo', 'bar', 10)
-        self.assertTrue(result)
-        result = yield self._kill_client(self.client)
-        self.assertTrue(result)
-        with self.assertRaises(exceptions.ConnectionError):
-            yield self.client.get('foo')
-
-    @testing.gen_test
     def test_competing_connections(self):
         result1 = self.client.set('foo', 'bar', 10)
         result2 = self.client.set('foo', 'baz', 10)

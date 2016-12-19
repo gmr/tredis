@@ -2,6 +2,7 @@
 
 """
 import mock
+import time
 
 from tornado import testing
 
@@ -65,3 +66,9 @@ class ServerTests(base.AsyncTestCase):
     def test_select_response(self):
         result = yield self.client.select(1)
         self.assertTrue(result)
+
+    @testing.gen_test
+    def test_time(self):
+        now = time.time()
+        result = yield self.client.time()
+        self.assertAlmostEqual(result, now, 1)
