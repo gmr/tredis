@@ -1,8 +1,8 @@
 Version History
 ===============
 
-- Next Release
-
+- 0.6.0
+  - Added ``ZREM`` to the `Sorted Sets <http://redis.io/commands#sorted_set>`_ commands
   - Locate master and reconnect when a ``READONLY`` response is received
   - Add `TIME <https://redis.io/commands/time>`_ command
 
