@@ -1,0 +1,6 @@
+%YAML 1.2
+---
+redis:
+  image: gavinmroy/alpine-redis:3.2.5
+  ports:
+    - 6379
