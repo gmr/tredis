@@ -71,4 +71,4 @@ class ServerTests(base.AsyncTestCase):
     def test_time(self):
         now = time.time()
         result = yield self.client.time()
-        self.assertAlmostEqual(result, now, 1)
+        self.assertTrue(now - 10 < int(result), now + 10)

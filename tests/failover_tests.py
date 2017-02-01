@@ -11,6 +11,7 @@ class FailoverTests(base.AsyncTestCase):
         super(FailoverTests, self).setUp()
         self.initial_addr = (self.client._connection.host,
                              self.client._connection.port)
+        self.reset_slave_relationship()
 
     @property
     def redis_port(self):

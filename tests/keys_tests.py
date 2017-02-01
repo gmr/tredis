@@ -524,6 +524,7 @@ class MigrationTests(base.AsyncTestCase):
         self.node2_ip = os.getenv('NODE2_IP', 'localhost')
         self.node2_port = int(os.getenv('NODE2_PORT', 'localhost'))
         self.disable_slave()
+        time.sleep(0.5)
 
     @testing.gen_test
     def test_migrate(self):

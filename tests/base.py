@@ -2,6 +2,7 @@ import contextlib
 import os
 import logging
 import socket
+import time
 import uuid
 
 from tornado import concurrent
@@ -21,8 +22,19 @@ class AsyncTestCase(testing.AsyncTestCase):
         self.client = tredis.RedisClient(self.redis_host, self.redis_port,
                                          self.redis_db)
         self._execute_result = None
+
+    def tearDown(self):
+        try:
+            self.client.close()
+        except tredis.ConnectionError:
+            pass
+
+    def reset_slave_relationship(self):
+        logging.debug('Resetting slave relationship')
         self.disable_slave()
+        time.sleep(0.5)
         self.enable_slave()
+        time.sleep(0.5)
 
     @staticmethod
     def disable_slave():
@@ -46,8 +58,6 @@ class AsyncTestCase(testing.AsyncTestCase):
             s.send('SLAVEOF {0} {1}\r\n'.format(
                 os.environ['REDIS_HOST'],
                 os.environ['NODE1_PORT']).encode('ASCII'))
-
-
 
     @property
     def redis_host(self):
