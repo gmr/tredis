@@ -345,10 +345,8 @@ class Client(server.ServerMixin,
                     _, _, port = line.partition(':')
 
             if host and port:
-
                 self._connection.close()
                 del self._connections[self._current_host]
-
                 master = '{}:{}'.format(host, port)
                 if master not in self._connections:
                     self._connections[master] = _Connection(
@@ -386,9 +384,7 @@ class Client(server.ServerMixin,
                     future.set_result(response == expectation)
             else:
                 future.set_result(response)
-
         else:
-
             def on_data(data):
                 LOGGER.debug('Read %r', data)
                 self._reader.feed(data)

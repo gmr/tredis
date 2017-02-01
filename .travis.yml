@@ -13,6 +13,7 @@ install:
 before_script:
   - ./bootstrap
 script:
+  - source build/test-environment
   - nosetests
 after_success:
   - codecov
