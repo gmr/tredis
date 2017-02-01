@@ -11,5 +11,6 @@ RUN \
     chmod a+x /usr/local/bin/redis-trib.rb && \
     apk --purge del curl && \
     rm -rf /var/cache/apk/*
+ADD run.sh /usr/local/bin/
 
-ENTRYPOINT ["/usr/local/bin/redis-trib.rb"]
+ENTRYPOINT ["/usr/local/bin/run.sh"]
