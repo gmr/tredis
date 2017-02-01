@@ -544,7 +544,6 @@ class KeysMixin(object):
             command += [b'MATCH', pattern]
         if count:
             command += [b'COUNT', ascii(count).encode('ascii')]
-        print(command)
         return self._execute(command, format_callback=format_response)
 
     def sort(self,
