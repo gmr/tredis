@@ -9,7 +9,8 @@ class FailoverTests(base.AsyncTestCase):
 
     def setUp(self):
         super(FailoverTests, self).setUp()
-        self.initial_addr = (self.client.host, self.client.port)
+        self.initial_addr = (self.client._connection.host,
+                             self.client._connection.port)
 
     @property
     def redis_port(self):
@@ -20,5 +21,6 @@ class FailoverTests(base.AsyncTestCase):
         key, field, value = self.uuid4(3)
         result = yield self.client.hset(key, field, value)
         self.assertEqual(result, 1)
-        redis_addr = (self.client.host, self.client.port)
+        redis_addr = (self.client._connection.host,
+                      self.client._connection.port)
         self.assertNotEqual(redis_addr, self.initial_addr)

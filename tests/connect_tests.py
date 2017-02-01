@@ -45,8 +45,9 @@ class ConnectTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_close_invokes_iostream_close(self):
-        r = yield self.client.set('foo', 'bar', 1)  # Establish the connection
-        with mock.patch.object(self.client._stream, 'close') as close:
+        yield self.client.set('foo', 'bar', 1)  # Establish the connection
+        stream = self.client._connection._stream
+        with mock.patch.object(stream, 'close') as close:
             self.client.close()
             close.assert_called_once_with()
 
