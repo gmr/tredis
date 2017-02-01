@@ -4,7 +4,7 @@ XModem CRC 16 (CRC-CCITT) algorithm used by Redis Cluster to hash keys
 """
 import sys
 
-XMODEM_CRC16_LOOKUP = [
+_CRC16_LOOKUP = [
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
     0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
     0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
@@ -36,11 +36,10 @@ XMODEM_CRC16_LOOKUP = [
     0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b, 0x9de8, 0x8dc9,
     0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1,
     0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
-    0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
-]
+    0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0]
 
 
-def crc16_py2(value):
+def _py2_crc16(value):
     """Calculate the CRC for the value in Python 2
 
     :param str value: The value to return for the CRC Checksum
@@ -49,12 +48,12 @@ def crc16_py2(value):
     """
     crc = 0
     for byte in value:
-        crc = ((crc << 8) & 0xffff) ^ \
-              XMODEM_CRC16_LOOKUP[((crc >> 8) ^ ord(byte)) & 0xff]
+        crc = ((crc << 8) & 0xffff) ^ _CRC16_LOOKUP[((crc >> 8) ^ ord(byte))
+                                                    & 0xff]
     return crc
 
 
-def crc16_py3(value):
+def _py3_crc16(value):
     """Calculate the CRC for the value in Python 3
 
     :param bytes value: The value to return for the CRC Checksum
@@ -63,12 +62,9 @@ def crc16_py3(value):
     """
     crc = 0
     for byte in value:
-        crc = ((crc << 8) & 0xffff) ^ \
-              XMODEM_CRC16_LOOKUP[((crc >> 8) ^ byte) & 0xff]
+        crc = ((crc << 8) & 0xffff) ^ _CRC16_LOOKUP[((crc >> 8) ^ byte) & 0xff]
     return crc
 
 
-if sys.version_info < (3, 0, 0):
-    crc16 = crc16_py2
-else:
-    crc16 = crc16_py3
+crc16 = _py2_crc16 if sys.version_info < (3, 0, 0) else _py3_crc16
+"""Pick the right method based upon the Python version"""
