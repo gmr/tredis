@@ -571,13 +571,17 @@ class MigrationTests(base.AsyncTestCase):
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
-        client = tredis.RedisClient(self.redis_host, 6379, 10)
+
+        client = tredis.RedisClient(self.redis_host, self.node2_port, 10)
         result = yield client.set(key, value, 10)
         self.assertTrue(result)
+
         result = yield self.client.migrate(self.node2_ip, 6379,
                                            key, 10, 5000, replace=True)
         self.assertTrue(result)
+
         result = yield client.get(key)
         self.assertEqual(result, value)
+
         result = yield self.client.get(key)
         self.assertIsNone(result)

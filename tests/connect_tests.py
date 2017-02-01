@@ -55,7 +55,7 @@ class ConnectTests(base.AsyncTestCase):
     def test_on_close_callback_invoked(self):
         on_close = mock.Mock()
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('REDIS_PORT', '6379')), 0,
+                                    int(os.getenv('NODE1_PORT', '6379')), 0,
                                     on_close)
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)
