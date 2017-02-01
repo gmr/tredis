@@ -1,8 +1,10 @@
+import contextlib
 import os
+import logging
+import socket
 import uuid
 
 from tornado import concurrent
-from tornado import gen
 from tornado import testing
 
 import tredis
@@ -19,6 +21,33 @@ class AsyncTestCase(testing.AsyncTestCase):
         self.client = tredis.RedisClient(self.redis_host, self.redis_port,
                                          self.redis_db)
         self._execute_result = None
+        self.disable_slave()
+        self.enable_slave()
+
+    @staticmethod
+    def disable_slave():
+        logging.debug('Disabling slave mode on node2')
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM,
+                          socket.IPPROTO_TCP)
+        with contextlib.closing(s):
+            sockaddr = (os.environ['REDIS_HOST'], int(os.environ['NODE2_PORT']))
+            logging.debug('making %r a slave of NODE1', sockaddr)
+            s.connect(sockaddr)
+            s.send('SLAVEOF NO ONE\r\n'.encode('ASCII'))
+
+    @staticmethod
+    def enable_slave():
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM,
+                          socket.IPPROTO_TCP)
+        with contextlib.closing(s):
+            sockaddr = (os.environ['REDIS_HOST'], int(os.environ['NODE2_PORT']))
+            logging.debug('making %r a slave of NODE1', sockaddr)
+            s.connect(sockaddr)
+            s.send('SLAVEOF {0} {1}\r\n'.format(
+                os.environ['REDIS_HOST'],
+                os.environ['NODE1_PORT']).encode('ASCII'))
+
+
 
     @property
     def redis_host(self):
@@ -26,7 +55,7 @@ class AsyncTestCase(testing.AsyncTestCase):
 
     @property
     def redis_port(self):
-        return int(os.environ.get('REDIS_PORT', '6379'))
+        return int(os.environ.get('NODE1_PORT', '6379'))
 
     @property
     def redis_db(self):

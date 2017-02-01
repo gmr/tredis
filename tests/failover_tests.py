@@ -5,21 +5,15 @@ from tornado import testing
 from . import base
 
 
-class ReplicationTests(base.AsyncTestCase):
+class FailoverTests(base.AsyncTestCase):
 
     def setUp(self):
-        super(ReplicationTests, self).setUp()
+        super(FailoverTests, self).setUp()
         self.initial_addr = (self.client.host, self.client.port)
-        self.master_addr = (os.environ.get('REDIS_HOST', 'localhost'),
-                            int(os.environ.get('REDIS_PORT', '6379')))
-
-    @property
-    def redis_host(self):
-        return os.environ['DOCKER_IP']
 
     @property
     def redis_port(self):
-        return int(os.environ['REDISSLAVE_PORT'])
+        return int(os.environ['NODE2_PORT'])
 
     @testing.gen_test
     def test_that_hset_writes_to_master(self):

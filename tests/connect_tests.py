@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import mock
@@ -24,8 +25,9 @@ class ConnectTests(base.AsyncTestCase):
         for match, addr in matches:
             value = addr
         self.assertIsNotNone(value, 'Could not find client')
-        yield client._execute([b'CLIENT', b'KILL', value.encode('ascii')])
-        raise gen.Return(True)
+        result = yield client._execute(
+            [b'CLIENT', b'KILL', value.encode('ascii')])
+        logging.info('CLIENT KILL result: %r', result)
 
     @testing.gen_test
     def test_bad_connect_raises_exception(self):
@@ -56,8 +58,7 @@ class ConnectTests(base.AsyncTestCase):
                                     on_close)
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)
-        result = yield self._kill_client(client)
-        self.assertTrue(result)
+        yield self._kill_client(client)
         on_close.assert_called_once_with()
 
     @testing.gen_test
