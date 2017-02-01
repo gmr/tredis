@@ -15,12 +15,16 @@ import tredis
 
 class AsyncTestCase(testing.AsyncTestCase):
 
+    CLUSTERING = False
     DEFAULT_EXPIRATION = 5
 
     def setUp(self):
         super(AsyncTestCase, self).setUp()
-        self.client = tredis.RedisClient(self.redis_host, self.redis_port,
-                                         self.redis_db)
+        self.client = tredis.Client(
+            [{'host': self.redis_host,
+              'port': self.redis_port,
+              'db': self.redis_db}],
+            clustering=self.CLUSTERING)
         self._execute_result = None
 
     def tearDown(self):

@@ -42,12 +42,11 @@ COMMAND="redis-cli SLAVEOF ${NODE1} 6379"
 docker exec -t -i tredis_redis_2 ${COMMAND}
 
 docker-compose ${COMPOSE_ARGS} up -d redis-cluster
-docker-compose ${COMPOSE_ARGS} scale redis-cluster=3
+docker-compose ${COMPOSE_ARGS} scale redis-cluster=6
 
 NODE3=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_1)
 NODE4=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_2)
 NODE5=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_3)
-
 
 # Create a cluster
 echo "Creating a redis cluster with 3 nodes"

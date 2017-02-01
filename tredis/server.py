@@ -1,7 +1,7 @@
 """Redis Server Commands Mixin"""
 from tornado import concurrent
 
-from tredis import exceptions
+from tredis import common, exceptions
 
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
@@ -91,48 +91,10 @@ class ServerMixin(object):
         :return: dict
 
         """
-
-        def parse_value(value):
-            """
-
-            :param value:
-            :return:
-
-            """
-            try:
-                if b'.' in value:
-                    return float(value)
-                else:
-                    return int(value)
-            except ValueError:
-                if b',' in value or b'=' in value:
-                    retval = {}
-                    for row in value.split(b','):
-                        key, val = row.rsplit(b'=', 1)
-                        retval[key.decode('utf-8')] = parse_value(val)
-                    return retval
-                return value.decode('utf-8')
-
-        def format_response(value):
-            """Format the response from redis
-
-            :param str value: The return response from redis
-            :rtype: dict
-
-            """
-            info = {}
-            for line in value.splitlines():
-                if line.startswith(b'#'):
-                    continue
-                if b':' in line:
-                    key, value = line.split(b':', 1)
-                    info[key.decode('utf-8')] = parse_value(value)
-            return info
-
         if section:
             return self._execute([b'INFO', section],
-                                 format_callback=format_response)
-        return self._execute([b'INFO'], format_callback=format_response)
+                                 format_callback=common.format_response)
+        return self._execute([b'INFO'], format_callback=common.format_response)
 
     def ping(self):
         """Returns ``PONG`` if no argument is provided, otherwise return a copy
