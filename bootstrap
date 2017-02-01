@@ -42,18 +42,16 @@ COMMAND="redis-cli SLAVEOF ${NODE1} 6379"
 docker exec -t -i tredis_redis_2 ${COMMAND}
 
 docker-compose ${COMPOSE_ARGS} up -d redis-cluster
-docker-compose ${COMPOSE_ARGS} scale redis-cluster=6
+docker-compose ${COMPOSE_ARGS} scale redis-cluster=3
 
 NODE3=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_1)
 NODE4=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_2)
 NODE5=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_3)
-NODE6=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_4)
-NODE7=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_5)
-NODE8=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_6)
+
 
 # Create a cluster
-echo "Creating a redis cluster with 6 nodes"
-COMMAND="create --replicas 1 ${NODE3}:6379 ${NODE4}:6379 ${NODE5}:6379 ${NODE6}:6379 ${NODE7}:6379 ${NODE8}:6379"
+echo "Creating a redis cluster with 3 nodes"
+COMMAND="create --replicas 0 ${NODE3}:6379 ${NODE4}:6379 ${NODE5}:6379"
 docker run --rm -t -i gavinmroy/redis-trib:latest ${COMMAND}
 
 cat > build/test-environment <<EOF
@@ -70,11 +68,5 @@ export NODE4_IP=${NODE4}
 export NODE4_PORT=$(get_exposed_port redis-cluster 6379 2)
 export NODE5_IP=${NODE5}
 export NODE5_PORT=$(get_exposed_port redis-cluster 6379 3)
-export NODE6_IP=${NODE6}
-export NODE6_PORT=$(get_exposed_port redis-cluster 6379 4)
-export NODE7_IP=${NODE7}
-export NODE7_PORT=$(get_exposed_port redis-cluster 6379 5)
-export NODE8_IP=${NODE8}
-export NODE8_PORT=$(get_exposed_port redis-cluster 6379 6)
 EOF
 echo "\nDon't forget to 'source build/test-environment'"
