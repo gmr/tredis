@@ -1,13 +1,11 @@
 %YAML 1.2
 ---
 redis:
-  image: gavinmroy/alpine-redis:latest
+  image: gavinmroy/alpine-redis:3.2.5
   ports:
     - 6379
 
-redis-slave:
-  image: gavinmroy/alpine-redis:latest
+redis-cluster:
+  image: gavinmroy/alpine-redis-cluster:3.2.5
   ports:
     - 6379
-  links:
-    - redis

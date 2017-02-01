@@ -6,49 +6,75 @@
 # SYNOPSIS
 #    bootstrap
 #
-get_exposed_port() {
-  if test -n "$3"
-  then
-    docker-compose port --index=$3 $1 $2 | cut -d: -f2
-  else
-    docker-compose port $1 $2 | cut -d: -f2
-  fi
-}
-
 DOCKER_IP=${DOCKER_IP:-$1}
 if [ -z "${DOCKER_IP}" ]
 then
   if test -e /var/run/docker.sock
   then
     DOCKER_IP=127.0.0.1
-  else
-    docker-machine status tredis 2>/dev/null
-    RESULT=$?
-    if [ ${RESULT} -ne 0 ]
-    then
-      docker-machine create --driver virtualbox tredis
-    fi
-    eval $(docker-machine env tredis 2>/dev/null) || {
-      echo "Failed to initialize docker environment"
-      exit 2
-    }
-    DOCKER_IP=$(docker-machine ip tredis)
   fi
 fi
 
 test -d build || mkdir build
 
-docker-compose stop
-docker-compose rm --force
-docker-compose up -d
-docker-compose scale redis=2
-cat > build/env-vars <<EOF
+COMPOSE_ARGS="-p tredis"
+
+get_exposed_port() {
+  if test -n "$3"
+  then
+    docker-compose ${COMPOSE_ARGS} port --index=$3 $1 $2 | cut -d: -f2
+  else
+    docker-compose ${COMPOSE_ARGS} port $1 $2 | cut -d: -f2
+  fi
+}
+
+docker-compose ${COMPOSE_ARGS} stop
+docker-compose ${COMPOSE_ARGS} rm --force
+docker-compose ${COMPOSE_ARGS} up -d redis
+
+docker-compose ${COMPOSE_ARGS} scale redis=2
+
+NODE1=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis_1)
+NODE2=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis_2)
+
+echo "Making NODE2 a slave of NODE1: "
+COMMAND="redis-cli SLAVEOF ${NODE1} 6379"
+docker exec -t -i tredis_redis_2 ${COMMAND}
+
+docker-compose ${COMPOSE_ARGS} up -d redis-cluster
+docker-compose ${COMPOSE_ARGS} scale redis-cluster=6
+
+NODE3=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_1)
+NODE4=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_2)
+NODE5=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_3)
+NODE6=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_4)
+NODE7=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_5)
+NODE8=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_6)
+
+# Create a cluster
+echo "Creating a redis cluster with 6 nodes"
+COMMAND="create --replicas 1 ${NODE3}:6379 ${NODE4}:6379 ${NODE5}:6379 ${NODE6}:6379 ${NODE7}:6379 ${NODE8}:6379"
+docker run --rm -t -i gavinmroy/redis-trib:latest ${COMMAND}
+
+cat > build/test-environment <<EOF
 export DOCKER_IP=${DOCKER_IP}
 export REDIS_HOST=${DOCKER_IP}
-export REDIS_PORT=$(get_exposed_port redis 6379 1)
-export REDIS2_PORT=$(get_exposed_port redis 6379 2)
-export REDIS2_HOST=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis_2)
-export REDISSLAVE_PORT=$(get_exposed_port redis-slave 6379)
-export REDISSLAVE_HOST=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-slave_1)
+export REDIS_PORT=6379
+export NODE1_IP=${NODE1}
+export NODE1_PORT=$(get_exposed_port redis 6379 1)
+export NODE2_IP=${NODE2}
+export NODE2_PORT=$(get_exposed_port redis 6379 2)
+export NODE3_IP=${NODE3}
+export NODE3_PORT=$(get_exposed_port redis-cluster 6379 1)
+export NODE4_IP=${NODE4}
+export NODE4_PORT=$(get_exposed_port redis-cluster 6379 2)
+export NODE5_IP=${NODE5}
+export NODE5_PORT=$(get_exposed_port redis-cluster 6379 3)
+export NODE6_IP=${NODE6}
+export NODE6_PORT=$(get_exposed_port redis-cluster 6379 4)
+export NODE7_IP=${NODE7}
+export NODE7_PORT=$(get_exposed_port redis-cluster 6379 5)
+export NODE8_IP=${NODE8}
+export NODE8_PORT=$(get_exposed_port redis-cluster 6379 6)
 EOF
-echo "Don't forget to 'source build/env-vars'"
+echo "\nDon't forget to 'source build/test-environment'"
