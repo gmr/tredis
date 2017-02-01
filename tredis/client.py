@@ -241,7 +241,7 @@ class Client(server.ServerMixin,
     @property
     def _connection(self):
         if not self._current_host:
-            hosts = self._connections.keys()
+            hosts = list(self._connections.keys())
             self._current_host = hosts[0]
             LOGGER.debug('Set current host to %s', self._current_host)
         return self._connections[self._current_host]
