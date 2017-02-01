@@ -38,7 +38,7 @@ class ConnectTests(base.AsyncTestCase):
     @testing.gen_test
     def test_bad_db_raises_exception(self):
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('REDIS_PORT', '6379')),
+                                    int(os.getenv('NODE1_PORT', '6379')),
                                     db=255)
         with self.assertRaises(exceptions.RedisError):
             yield client.get('foo')
