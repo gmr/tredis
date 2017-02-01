@@ -169,7 +169,11 @@ class ServerMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        return self._execute([b'SELECT', ascii(index).encode('ascii')], b'OK')
+        result = self._execute(
+            [b'SELECT', ascii(index).encode('ascii')], b'OK')
+        if result:
+            self._current_database = index
+        return result
 
     def time(self):
         """Retrieve the current time from the redis server.
