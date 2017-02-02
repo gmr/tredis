@@ -134,7 +134,7 @@ class _Connection(object):
                 self.io_loop.add_future(select_future, on_ready)
                 self._on_response(select_future)
 
-            if self._cluster_node:
+            if not self._cluster_node:
                 LOGGER.debug('Selecting the default db: %r', self._default_db)
                 command = 'SELECT {0}\r\n'.format(ascii(self._default_db))
             else:
@@ -196,7 +196,7 @@ class _Connection(object):
         return '{}:{}'.format(self.host, self.port)
 
     @property
-    def name(self):
+    def slots(self):
         return self._slots
 
     def _reconnect(self, host, port, callback):
@@ -272,46 +272,54 @@ class Client(server.ServerMixin,
         if not self._current_host:
             hosts = list(self._connections.keys())
             self._current_host = hosts[0]
-            LOGGER.debug('Set current host to %s', self._current_host)
+            LOGGER.debug('Set current host to %s %r', self._current_host, hosts)
         return self._connections[self._current_host]
+
+    @staticmethod
+    def _connection_host_port(value):
+        parts = value.split(':')
+        return parts[0], int(parts[1])
 
     def _create_connections(self, values):
         connections = {}
         for row in values:
+            LOGGER.debug('Creating a connection to %s:%s (db %s)',
+                         row['host'], row['port'], row.get('db', DEFAULT_DB))
             conn = _Connection(
-                row['host'], row['port'], row.get('db'),
+                row['host'], row['port'], row.get('db', DEFAULT_DB),
                 self._on_response,
                 self._on_close,
                 self.io_loop,
                 cluster_node=self._clustering)
+            LOGGER.debug('Connection %s', conn.name)
             connections[conn.name] = conn
         return connections
 
     def _discover_cluster(self):
+        self.io_loop.add_future(self.cluster_nodes(), self._on_cluster_nodes)
 
-        def on_node_info(future):
-            err = future.exception()
-            if err:
-                raise err
+    def _on_cluster_nodes(self, future):
+        err = future.exception()
+        if err:
+            raise err
 
-            for node in future.results():
-                read_only = 'slave' in node['flags']
-                if node['ip:port'] in self._connections:
-                    self._connections[node['ip:port']].set_slots(node['slots'])
-                    self._connections[node['ip:port']].set_read_only(read_only)
-                else:
-                    parts = node['ip:port'].split(':')
-                    self._connections[node['ip:port']] = _Connection(
-                        parts[0], int(parts[1]),
-                        self._current_database,
-                        self._on_response,
-                        self._on_close,
-                        self.io_loop,
-                        cluster_node=True,
-                        read_only=read_only,
-                        slots=node['slots'])
-
-        self.io_loop.add_future(self.cluster_nodes(), on_node_info)
+        nodes = future.result()
+        for node in nodes:
+            read_only = 'slave' in node.flags
+            name = '{}:{}'.format(node.ip, node.port)
+            if name in self._connections:
+                LOGGER.debug('Updating cluster connection info for %s:%s',
+                             node.ip, node.port)
+                self._connections[name].set_slots(node.slots)
+                self._connections[name].set_read_only(read_only)
+            else:
+                LOGGER.debug('Creating a cluster connection to %s:%s',
+                             node.ip, node.port)
+                self._connections[name] = _Connection(
+                    node.ip, node.port, self._current_database,
+                    self._on_response, self._on_close, self.io_loop,
+                    cluster_node=True, read_only=read_only,
+                    slots=node.slots)
 
     def _encode_resp(self, value):
         """Dynamically build the RESP payload based upon the list provided.

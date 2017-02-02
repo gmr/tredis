@@ -91,10 +91,10 @@ class ServerMixin(object):
         :return: dict
 
         """
+        cmd = [b'INFO']
         if section:
-            return self._execute([b'INFO', section],
-                                 format_callback=common.format_response)
-        return self._execute([b'INFO'], format_callback=common.format_response)
+            cmd.append(section)
+        return self._execute(cmd, format_callback=common.format_info_response)
 
     def ping(self):
         """Returns ``PONG`` if no argument is provided, otherwise return a copy

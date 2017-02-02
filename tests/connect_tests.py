@@ -38,7 +38,7 @@ class ConnectTests(base.AsyncTestCase):
     @testing.gen_test
     def test_bad_db_raises_exception(self):
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('NODE1_PORT', '6379')),
+                                    int(os.getenv('REDIS1_PORT', '6379')),
                                     db=255)
         with self.assertRaises(exceptions.RedisError):
             yield client.get('foo')
@@ -55,7 +55,7 @@ class ConnectTests(base.AsyncTestCase):
     def test_on_close_callback_invoked(self):
         on_close = mock.Mock()
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('NODE1_PORT', '6379')), 0,
+                                    int(os.getenv('REDIS1_PORT', '6379')), 0,
                                     on_close)
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)

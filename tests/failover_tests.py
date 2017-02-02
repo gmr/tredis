@@ -15,7 +15,7 @@ class FailoverTests(base.AsyncTestCase):
 
     @property
     def redis_port(self):
-        return int(os.environ['NODE2_PORT'])
+        return int(os.environ['REDIS2_PORT'])
 
     @testing.gen_test
     def test_that_hset_writes_to_master(self):

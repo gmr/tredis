@@ -1,5 +1,12 @@
 """Redis Cluster Commands Mixin"""
+import collections
+
 from tredis import common
+
+ClusterNode = collections.namedtuple('ClusterNode', [
+    'id', 'ip', 'port', 'flags', 'master', 'ping_sent', 'pong_recv',
+    'config_epoch', 'link_state', 'slots'
+])
 
 
 class ClusterMixin(object):
@@ -72,7 +79,7 @@ class ClusterMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        return self._execute([b'CLUSTER_INFO'],
+        return self._execute([b'CLUSTER', 'INFO'],
                              format_callback=common.format_info_response)
 
     def cluster_key_slot(self, key):
@@ -111,23 +118,16 @@ class ClusterMixin(object):
                 parts = row.split(' ')
                 slots = []
                 for slot in parts[8:]:
-                    print(slot)
                     if '-' in slot:
                         sparts = slot.split('-')
                         slots.append((int(sparts[0]), int(sparts[1])))
                     else:
                         slots.append((int(slot), int(slot)))
-                values.append({
-                    'id': parts[0],
-                    'ip:port': parts[1],
-                    'flags': parts[2],
-                    'master': parts[3],
-                    'ping-sent': int(parts[4]),
-                    'pong-recv': int(parts[5]),
-                    'config-epoch': int(parts[6]),
-                    'link-state': parts[7],
-                    'slots': slots
-                })
+                ip_port = self._split_host_port(parts[1])
+                values.append(ClusterNode(
+                    parts[0], ip_port[0], ip_port[1], parts[2], parts[3],
+                    int(parts[4]), int(parts[5]), int(parts[6]), parts[7],
+                    slots))
             return values
         return self._execute(['CLUSTER', 'NODES'],
                              format_callback=format_response)
@@ -159,3 +159,7 @@ class ClusterMixin(object):
     def cluster_readwrite(self):
         pass
 
+    @staticmethod
+    def _split_host_port(value):
+        parts = value.split(':')
+        return parts[0], int(parts[1])
