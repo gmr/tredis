@@ -33,7 +33,7 @@ class ClusterBehaviorTests(AsyncTestCase):
                 value = yield self.client.get(key)
                 self.assertEqual(value, b'1')
         except tredis.RedisError as error:
-            info = yield self.cluster_info()
+            info = yield self.client.cluster_info()
             pprint.pprint(info)
-            raise
+            raise error
 
