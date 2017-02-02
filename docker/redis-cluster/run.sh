@@ -6,6 +6,7 @@ sed -i 's/^\(bind .*\)$/# \1/' /etc/redis.conf
 sed -i 's/^\(daemonize .*\)$/# \1/' /etc/redis.conf
 sed -i 's/^\(dir .*\)$/# \1\ndir \/data/' /etc/redis.conf
 sed -i 's/^\(logfile .*\)$/# \1/' /etc/redis.conf
+sed -i 's/^# cluster-node-timeout 15000/cluster-node-timeout 30000/'  /etc/redis.conf
 COMMAND="s/port 6379/port ${REDIS_PORT}/"
 sed -i "${COMMAND}" /etc/redis.conf
 /usr/bin/redis-server /etc/redis.conf $@
