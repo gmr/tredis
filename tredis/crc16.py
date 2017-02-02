@@ -48,8 +48,8 @@ def _py2_crc16(value):
     """
     crc = 0
     for byte in value:
-        crc = ((crc << 8) & 0xffff) ^ _CRC16_LOOKUP[((crc >> 8) ^ ord(byte))
-                                                    & 0xff]
+        crc = ((crc << 8) & 0xffff) ^ \
+              _CRC16_LOOKUP[((crc >> 8) ^ ord(byte)) & 0xff]
     return crc
 
 

@@ -33,7 +33,8 @@ class SortedSetsMixin(object):
         **ZADD options (Redis 3.0.2 or greater)**
         ZADD supports a list of options. Options are:
         ``xx``: Only update elements that already exist. Never add elements.
-        ``nx``: Don't update already existing elements. Always add new elements.
+        ``nx``: Don't update already existing elements. Always add new
+            elements.
         ``ch``: Modify the return value from the number of new elements added,
         to the total number of elements changed (CH is an abbreviation of
         changed). Changed elements are new elements added and elements already

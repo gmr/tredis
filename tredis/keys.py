@@ -172,8 +172,8 @@ class KeysMixin(object):
          - ``h[^e]llo`` matches ``hallo``, ``hbllo``, but not ``hello``
          - ``h[a-b]llo`` matches ``hallo`` and ``hbllo``
 
-        Use ``\`` to escape special characters if you want to match them
-        verbatim.
+        Use a backslash (``\``) to escape special characters if you want to
+        match them verbatim.
 
         .. note::
 
@@ -224,8 +224,8 @@ class KeysMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        command = [b'MIGRATE', host, ascii(port).encode('ascii'), key,
-                   ascii(destination_db).encode('ascii'),
+        command = [b'MIGRATE', host, ascii(port).encode('ascii'),
+                   key, ascii(destination_db).encode('ascii'),
                    ascii(timeout).encode('ascii')]
         if copy is True:
             command.append(b'COPY')

@@ -2,6 +2,7 @@
 Cluster Supporting Redis Client
 
 """
+import collections
 import logging
 
 import hiredis
@@ -11,6 +12,7 @@ from tornado import locks
 from tornado import iostream
 from tornado import tcpclient
 
+from tredis import common
 from tredis import crc16
 from tredis import exceptions
 from tredis import cluster
@@ -41,10 +43,16 @@ DEFAULT_PORT = 6379
 DEFAULT_DB = 0
 """The default database number to use"""
 
+HASH_SLOTS = 16384
+"""Redis Cluster Hash Slots Value"""
 
 # Python 2 support for ascii()
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
     from tredis.compat import ascii
+
+
+Command = collections.namedtuple('Command', ['command', 'connection',
+                                             'expectation', 'callback'])
 
 
 class _Connection(object):
@@ -57,21 +65,23 @@ class _Connection(object):
 
     """
 
-    def __init__(self, host, port, db, on_response, on_close, io_loop,
+    def __init__(self, host, port, db, on_written, on_close, io_loop,
                  cluster_node=False, read_only=False, slots=None):
         super(_Connection, self).__init__()
+        self.connected = False
         self.io_loop = io_loop
         self.host = host
         self.port = port
+        self.database = int(db or DEFAULT_DB)
 
-        self._default_db = int(db or DEFAULT_DB)
         self._client = tcpclient.TCPClient()
         self._cluster_node = cluster_node
         self._read_only = read_only
-        self._slots = slots
+        self._slots = slots or []
         self._stream = None
+        self._on_connect = None
         self._on_close = on_close
-        self._on_response = on_response
+        self._on_written = on_written
 
     def close(self):
         """Close the stream.
@@ -84,67 +94,49 @@ class _Connection(object):
             raise exceptions.ConnectionError('Not connected')
         self._stream.close()
 
-    def connect(self, callback):
+    def connect(self):
         """Connect to the Redis server if necessary.
 
+        :rtype: :class:`~tornado.concurrent.Future`
         :raises: :class:`~tredis.exceptions.ConnectError`
                  :class:`~tredis.exceptinos.RedisError`
 
         """
-        future = concurrent.TracebackFuture()
-        self.io_loop.add_future(future, callback)
+        future = concurrent.Future()
 
-        if self._stream is not None:
-            return future.set_result(True)
+        if self.connected:
+            raise exceptions.ConnectError('already connected')
 
-        LOGGER.debug('Connecting to %s:%r', self.host, self.port)
-        connect_future = self._client.connect(self.host, self.port)
+        LOGGER.debug('%s connecting', self.name)
+        self.io_loop.add_future(self._client.connect(self.host, self.port),
+                                lambda f: self._on_connected(f, future))
+        return future
 
-        def on_ready(response):
-            """Invoked when the default database is selected when connecting
+    def execute(self, command, future):
+        """Execute a command after connecting if necessary.
 
-            :param response: the connection response future
-            :type response: :class:`~tornado.concurrent.Future`
+        :param bytes command: command to execute after the connection
+            is established
+        :param tornado.concurrent.Future future:  future to resolve
+            when the command's response is received.
 
-            """
-            exc = response.exception()
-            if exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(response.result in {b'OK', b'PONG'})
+        """
+        LOGGER.debug('execute(%r, %r)', command, future)
+        if self.connected:
+            self._write(command, future)
+        else:
+            def on_connected(cfuture):
+                if cfuture.exception():
+                    return future.set_exception(cfuture.exception())
+                self._write(command, future)
 
-        def on_connected(response):
-            """Invoked when the socket stream has connected
+            self.io_loop.add_future(self.connect(), on_connected)
 
-            :param response: The connection response future
-            :type response: :class:`~tornado.concurrent.Future`
+    @property
+    def name(self):
+        return '{}:{}'.format(self.host, self.port)
 
-            """
-            exc = response.exception()
-            if exc:
-                return future.set_exception(exceptions.ConnectError(exc))
-
-            self._stream = response.result()
-            self._stream.set_close_callback(self._on_closed)
-            if not self._default_db:
-                return future.set_result(True)
-
-            def on_written():
-                select_future = concurrent.TracebackFuture()
-                self.io_loop.add_future(select_future, on_ready)
-                self._on_response(select_future)
-
-            if not self._cluster_node:
-                LOGGER.debug('Selecting the default db: %r', self._default_db)
-                command = 'SELECT {0}\r\n'.format(ascii(self._default_db))
-            else:
-                command = 'PING\r\n'
-            LOGGER.debug('Issuing connection command: %r[:-2]', command)
-            self._stream.write(command.encode('ASCII'), on_written)
-
-        self.io_loop.add_future(connect_future, on_connected)
-
-    def read_bytes(self, callback):
+    def read(self, callback):
         """Issue a read on the stream, invoke callback when completed.
 
         :raises: :class:`tredis.exceptions.ConnectionError` if the
@@ -159,67 +151,52 @@ class _Connection(object):
     def set_slots(self, slots):
         self._slots = slots
 
-    def write_command(self, command, future, **kwargs):
-        """Execute a command after connecting if necessary.
-
-        :param bytes command: command to execute after the connection
-            is established
-        :param tornado.concurrent.Future future:  future to resolve
-            when the command's response is received.
-        :keyword expectation: optional response expectation.
-        :keyword format_callback: optional callable that is invoked to
-            extract the result from the redis response.
-
-        """
-
-        def on_written():
-            self._on_response(future, **kwargs)
-
-        def on_ready(f):
-            if f.exception():
-                return future.set_exception(f.exception())
-
-            try:
-                self._stream.write(command, callback=on_written)
-
-            except iostream.StreamClosedError as error:
-                future.set_exception(exceptions.ConnectionError(error))
-
-            except Exception as error:
-                LOGGER.exception('unhandled write failure - %r', error)
-                future.set_exception(exceptions.ConnectionError(error))
-
-        self.connect(on_ready)
-
-    @property
-    def name(self):
-        return '{}:{}'.format(self.host, self.port)
-
     @property
     def slots(self):
         return self._slots
 
-    def _reconnect(self, host, port, callback):
-        """Reconnect to a new redis instance.
-
-        :param str host: host to connect to
-        :param str|int port: port number to connect to
-        :param callback: callable to invoke when the connection
-            is finished.
-
-        The *callback* is passed to :meth:`._maybe_connect`
-
-        """
-        self.close()
-        self._stream = None
-        self.host, self.port = host, int(port)
-        self.connect(callback)
-
     def _on_closed(self):
         """Invoked when the connection is closed"""
         LOGGER.error('Redis connection closed')
+        self.connected = False
         self._on_close()
         self._stream = None
+
+    def _on_connected(self, stream_future, connect_future):
+        """Invoked when the socket stream has connected, setting up the
+        stream callbacks and invoking the on connect callback if set.
+
+        :param future: The connection response future
+        :type future: :class:`~tornado.concurrent.Future`
+        :raises: :exc:`tredis.exceptions.ConnectError`
+
+        """
+        if stream_future.exception():
+            connect_future.set_exception(
+                exceptions.ConnectError(stream_future.exception()))
+        else:
+            self._stream = stream_future.result()
+            self._stream.set_close_callback(self._on_closed)
+            self.connected = True
+            connect_future.set_result(self)
+
+    def _write(self, command, future):
+        """Write a command to the socket
+
+        :param Command command: the Command data structure
+
+        """
+
+        def on_written():
+            self._on_written(command, future)
+
+        try:
+            self._stream.write(command.command, callback=on_written)
+        except iostream.StreamClosedError as error:
+            future.set_exception(exceptions.ConnectionError(error))
+        except Exception as error:
+            LOGGER.exception('unhandled write failure - %r', error)
+            future.set_exception(exceptions.ConnectionError(error))
 
 
 class Client(server.ServerMixin,
@@ -240,23 +217,58 @@ class Client(server.ServerMixin,
     ClusterClient.
 
     """
-    def __init__(self, hosts, on_close=None, io_loop=None, clustering=False):
+    def __init__(self, hosts, on_close=None, io_loop=None, clustering=False,
+                 auto_connect=True):
         self._buffer = bytes()
         self._busy = locks.Lock()
+        self._closing = False
+        self._cluster = {}
         self._clustering = clustering
-        self._current_command = None
-        self._current_database = 0
-        self._current_host = None
+        self._connected = locks.Event()
+        self._connect_future = concurrent.Future()
+        self._connection = None
+        self._discovery = False
+        self._hosts = hosts
         self._on_close_callback = on_close
         self._reader = hiredis.Reader()
         self.io_loop = io_loop or ioloop.IOLoop.current()
-        self._connections = self._create_connections(hosts)
-        if self._clustering:
-            self._discover_cluster()
+        if not self._clustering:
+            if len(hosts) > 1:
+                raise ValueError('Too many hosts for non-clustering mode')
+        if auto_connect:
+            LOGGER.debug('Auto-connecting')
+            self.connect()
+
+    def connect(self):
+        LOGGER.debug('Creating a%s connection to %s:%s (db %s)',
+                     ' cluster node' if self._clustering else '',
+                     self._hosts[0]['host'], self._hosts[0]['port'],
+                     self._hosts[0].get('db', DEFAULT_DB))
+        self._connect_future = concurrent.Future()
+        conn = _Connection(
+            self._hosts[0]['host'], self._hosts[0]['port'],
+            self._hosts[0].get('db', DEFAULT_DB),
+            self._read, self._on_closed, self.io_loop,
+            cluster_node=self._clustering)
+        self.io_loop.add_future(conn.connect(), self._on_connected)
+        return self._connect_future
 
     def close(self):
-        for host in self._connections.keys():
-            self._connections[host].close()
+        if not self._connected.is_set():
+            raise exceptions.ConnectionError('not connected')
+        self._closing = True
+        if self._clustering:
+            for host in self._cluster.keys():
+                self._cluster[host].close()
+        elif self._connection:
+            self._connection.close()
+
+    @property
+    def ready(self):
+        if self._clustering:
+            return all([c.connected for c in self._cluster.values()]) and \
+                    len(self._cluster)
+        return self._connection and self._connection.connected
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
@@ -267,59 +279,14 @@ class Client(server.ServerMixin,
         """
         return self._encode_resp(parts)
 
-    @property
-    def _connection(self):
-        if not self._current_host:
-            hosts = list(self._connections.keys())
-            self._current_host = hosts[0]
-            LOGGER.debug('Set current host to %s %r', self._current_host, hosts)
-        return self._connections[self._current_host]
-
-    @staticmethod
-    def _connection_host_port(value):
-        parts = value.split(':')
-        return parts[0], int(parts[1])
-
-    def _create_connections(self, values):
-        connections = {}
-        for row in values:
-            LOGGER.debug('Creating a connection to %s:%s (db %s)',
-                         row['host'], row['port'], row.get('db', DEFAULT_DB))
-            conn = _Connection(
-                row['host'], row['port'], row.get('db', DEFAULT_DB),
-                self._on_response,
-                self._on_close,
-                self.io_loop,
-                cluster_node=self._clustering)
-            LOGGER.debug('Connection %s', conn.name)
-            connections[conn.name] = conn
-        return connections
-
-    def _discover_cluster(self):
-        self.io_loop.add_future(self.cluster_nodes(), self._on_cluster_nodes)
-
-    def _on_cluster_nodes(self, future):
-        err = future.exception()
-        if err:
-            raise err
-
-        nodes = future.result()
-        for node in nodes:
-            read_only = 'slave' in node.flags
-            name = '{}:{}'.format(node.ip, node.port)
-            if name in self._connections:
-                LOGGER.debug('Updating cluster connection info for %s:%s',
-                             node.ip, node.port)
-                self._connections[name].set_slots(node.slots)
-                self._connections[name].set_read_only(read_only)
-            else:
-                LOGGER.debug('Creating a cluster connection to %s:%s',
-                             node.ip, node.port)
-                self._connections[name] = _Connection(
-                    node.ip, node.port, self._current_database,
-                    self._on_response, self._on_close, self.io_loop,
-                    cluster_node=True, read_only=read_only,
-                    slots=node.slots)
+    def _create_cluster_connection(self, node):
+        LOGGER.debug('Creating a cluster connection to %s:%s',
+                     node.ip, node.port)
+        conn = _Connection(
+            node.ip, node.port, 0, self._read, self._on_closed, self.io_loop,
+            cluster_node=True, read_only='slave' in node.flags,
+            slots=node.slots)
+        self.io_loop.add_future(conn.connect(), self._on_connected)
 
     def _encode_resp(self, value):
         """Dynamically build the RESP payload based upon the list provided.
@@ -345,6 +312,13 @@ class Client(server.ServerMixin,
         else:
             raise ValueError('Unsupported type: {0}'.format(type(value)))
 
+    @staticmethod
+    def _eval_expectation(command, response, future):
+        if isinstance(command.expectation, int) and command.expectation > 1:
+            future.set_result(response == command.expectation or response)
+        else:
+            future.set_result(response == command.expectation)
+
     def _execute(self, parts, expectation=None, format_callback=None):
         """Really execute a redis command
 
@@ -355,102 +329,194 @@ class Client(server.ServerMixin,
         :raises: :exc:`~tredis.exceptions.SubscribedError`
 
         """
-        LOGGER.debug('_execute (%r, %r, %r)',
-                     parts, expectation, format_callback)
-
-        command = self._build_command(parts)
         future = concurrent.TracebackFuture()
 
-        def on_locked(_):
-            """Invoked once the lock has been acquired."""
-            LOGGER.debug('Executing %r (%r)', command, expectation)
-            self._current_command = command
-            self._connection.write_command(
-                command, future, expectation=expectation,
-                format_callback=format_callback)
+        try:
+            command = self._build_command(parts)
+        except ValueError as error:
+            future.set_exception(error)
+            return future
 
-        # Start executing once locked
-        lock_future = self._busy.acquire()
-        self.io_loop.add_future(lock_future, on_locked)
+        def on_locked(_):
+            if self.ready:
+                if self._clustering:
+                    cmd = Command(command,
+                                  self._pick_cluster_host(parts),
+                                  expectation, format_callback)
+                else:
+                    LOGGER.debug('Connection: %r', self._connection)
+                    cmd = Command(command, self._connection,
+                                  expectation, format_callback)
+                LOGGER.debug('_execute(%r, %r, %r) on %s',
+                             cmd.command, expectation, format_callback,
+                             cmd.connection.name)
+                cmd.connection.execute(cmd, future)
+            else:
+                LOGGER.critical('Lock released & not ready, aborting command')
+
+        # Wait until the cluster is ready, letting cluster discovery through
+        if not self.ready and not self._connected.is_set():
+            self.io_loop.add_future(
+                self._connected.wait(),
+                lambda f: self.io_loop.add_future(
+                    self._busy.acquire(), on_locked))
+        else:
+            self.io_loop.add_future(self._busy.acquire(), on_locked)
 
         # Release the lock when the future is complete
         self.io_loop.add_future(future, lambda r: self._busy.release())
         return future
 
-    def _on_response(self, future, expectation=None, format_callback=None):
-
-        def after_reconnected(f):
-            if f.exception():
-                return future.set_exception(f.exception())
-
-            self._connection.write_command(
-                self._current_command, future,
-                expectation=expectation,
-                format_callback=format_callback)
-
-        def on_replication_info(f):
-            if f.exception():
-                return future.set_exception(f.exception())
-
-            host, port = None, None
-            for line in f.result().decode('ASCII').splitlines():
-                if line.startswith('master_host'):
-                    _, _, host = line.partition(':')
-                elif line.startswith('master_port'):
-                    _, _, port = line.partition(':')
-
-            if host and port:
-                self._connection.close()
-                del self._connections[self._current_host]
-                master = '{}:{}'.format(host, port)
-                if master not in self._connections:
-                    self._connections[master] = _Connection(
-                        host, int(port),
-                        self._current_database,
-                        self._on_response,
-                        self._on_close,
-                        self.io_loop)
-                    self._current_host = master
-                    self._connection.connect(after_reconnected)
+    def _on_cluster_discovery(self, future):
+        LOGGER.debug('_on_cluster_discovery(%r)', future)
+        common.maybe_raise_exception(future)
+        nodes = future.result()
+        for node in nodes:
+            name = '{}:{}'.format(node.ip, node.port)
+            if name in self._cluster:
+                LOGGER.debug('Updating cluster connection info for %s:%s',
+                             node.ip, node.port)
+                self._cluster[name].set_slots(node.slots)
+                self._cluster[name].set_read_only('slave' in node.flags)
             else:
-                future.set_exception(exceptions.ConnectError(
-                    'master host or port missing from replication info'))
+                self._create_cluster_connection(node)
+        self._discovery = True
 
+    def _on_closed(self):
+        self._connected.clear()
+        if not self._closing:
+            if self._on_close_callback:
+                self._on_close_callback()
+            else:
+                raise exceptions.ConnectionError('closed')
+
+    def _on_cluster_data_moved(self, response, command, future):
+        LOGGER.debug('on_cluster_data_moved(%r, %r, %r)',
+                     response, command, future)
+        parts = response.split(' ')
+        name = '{}:{}'.format(*common.split_connection_host_port(parts[2]))
+        LOGGER.debug('Moved to %r', name)
+        if name not in self._cluster:
+            raise exceptions.ConnectionError(
+                '{} is not connected'.format(name))
+        self._cluster[name].execute(
+            command._replace(connection=self._cluster[name]), future)
+
+    def _on_connected(self, future):
+        if future.exception():
+            self._connect_future.set_exception(future.exception())
+            return
+
+        conn = future.result()
+        LOGGER.debug('Connected to %s (%r, %r, %r)',
+                     conn.name, self._clustering, self._discovery,
+                     self._connected)
+        if self._clustering:
+            self._cluster[conn.name] = conn
+            if not self._discovery:
+                self.io_loop.add_future(self.cluster_nodes(),
+                                        self._on_cluster_discovery)
+            elif self.ready:
+                LOGGER.debug('Cluster nodes all connected')
+                if not self._connect_future.done():
+                    self._connect_future.set_result(True)
+                self._connected.set()
+        else:
+            def on_selected(sfuture):
+                LOGGER.debug('Initial setup and selection processed')
+                if sfuture.exception():
+                    self._connect_future.set_exception(sfuture.exception())
+                else:
+                    self._connect_future.set_result(True)
+                self._connected.set()
+            select_future = concurrent.Future()
+            self.io_loop.add_future(select_future, on_selected)
+            self._connection = conn
+            cmd = Command(self._build_command(['SELECT', str(conn.database)]),
+                          self._connection, None, None)
+            cmd.connection.execute(cmd, select_future)
+
+    def _on_read_only_error(self, command, future):
+
+        failover_future = concurrent.TracebackFuture()
+
+        def on_replication_info(_):
+            common.maybe_raise_exception(failover_future)
+            LOGGER.debug('Failover closing current read-only connection')
+            self._closing = True
+            database = self._connection.database
+            self._connection.close()
+            self._connected.clear()
+            self._connect_future = concurrent.Future()
+
+            info = failover_future.result()
+            LOGGER.debug('Failover connecting to %s:%s',
+                         info['master_host'], info['master_port'])
+            self._connection = _Connection(
+                info['master_host'], info['master_port'],
+                database, self._read,
+                self._on_closed, self.io_loop, self._clustering)
+
+            # When the connection is re-established, re-run the command
+            self.io_loop.add_future(
+                self._connect_future,
+                lambda f: self._connection.execute(
+                    command._replace(connection=self._connection), future))
+
+            # Use the normal connection processing flow when connecting
+            self.io_loop.add_future(self._connection.connect(),
+                                    self._on_connected)
+
+        if self._clustering:
+            command.connection.set_readonly(True)
+
+        LOGGER.debug('%s is read-only, need to failover to new master',
+                     command.connection.name)
+
+        cmd = Command(self._build_command(['INFO', 'REPLICATION']),
+                      self._connection,
+                      None, common.format_info_response)
+
+        self.io_loop.add_future(failover_future, on_replication_info)
+        cmd.connection.execute(cmd, failover_future)
+
+    def _read(self, command, future):
         response = self._reader.gets()
         if response is not False:
             if isinstance(response, hiredis.ReplyError):
-                if response.args[0].startswith('READONLY '):
-                    LOGGER.debug('command performed against readonly '
-                                 'replica, finding master')
-                    new_future = concurrent.TracebackFuture()
-                    self.io_loop.add_future(new_future, on_replication_info)
-                    self._connection.write_command(
-                        b'INFO REPLICATION\r\n', new_future)
+                if response.args[0].startswith('MOVED '):
+                    self._on_cluster_data_moved(
+                        response.args[0], command, future)
+                elif response.args[0].startswith('READONLY '):
+                    self._on_read_only_error(command, future)
                 else:
                     future.set_exception(exceptions.RedisError(response))
-
-            elif format_callback is not None:
-                future.set_result(format_callback(response))
-
-            elif expectation is not None:
-                if isinstance(expectation, int) and expectation > 1:
-                    future.set_result(response == expectation or response)
-                else:
-                    future.set_result(response == expectation)
+            elif command.callback is not None:
+                future.set_result(command.callback(response))
+            elif command.expectation is not None:
+                self._eval_expectation(command, response, future)
             else:
                 future.set_result(response)
         else:
             def on_data(data):
-                LOGGER.debug('Read %r', data)
+                # LOGGER.debug('Read %r', data)
                 self._reader.feed(data)
-                self._on_response(future, expectation=expectation,
-                                  format_callback=format_callback)
+                self._read(command, future)
 
-            self._connection.read_bytes(on_data)
+            command.connection.read(on_data)
 
-    def _on_close(self):
-        if self._on_close_callback:
-            self._on_close_callback()
+    def _pick_cluster_host(self, value):
+        LOGGER.debug('_pick_cluster_host(%r)', value)
+        crc = crc16.crc16(self._encode_resp(value[1])) % HASH_SLOTS
+        for host in self._cluster.keys():
+            for slot in self._cluster[host].slots:
+                LOGGER.debug('%s: Slots: %r (%r)', host, slot, crc)
+                if slot[0] <= crc <= slot[1]:
+                    return self._cluster[host]
+        LOGGER.debug('Host not found for %r, returning first connection',
+                     value)
+        host_keys = sorted(list(self._cluster.keys()))
+        return self._cluster[host_keys[0]]
 
 
 class RedisClient(Client):
@@ -477,6 +543,8 @@ class RedisClient(Client):
                  host=DEFAULT_HOST,
                  port=DEFAULT_PORT,
                  db=DEFAULT_DB,
-                 on_close=None):
-        super(RedisClient, self).__init__([
-            {'host': host, 'port': port, 'db': db}], on_close)
+                 on_close=None,
+                 auto_connect=False):
+        super(RedisClient, self).__init__(
+            [{'host': host, 'port': port, 'db': db}],
+            on_close, clustering=False, auto_connect=auto_connect)

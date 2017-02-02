@@ -1,9 +1,10 @@
+import logging
 import mock
 import os
 import time
 import uuid
 
-from tornado import testing
+from tornado import gen, testing
 
 import tredis
 from tredis import exceptions
@@ -157,9 +158,10 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_move(self):
-        key, value = self.uuid4(2)
         response = yield self.client.select(2)
         self.assertTrue(response)
+
+        key, value = self.uuid4(2)
         response = yield self.expiring_set(key, value)
         self.assertTrue(response)
         response = yield self.client.move(key, 1)
@@ -259,6 +261,7 @@ class KeyCommandTests(base.AsyncTestCase):
 
     @testing.gen_test
     def test_randomkey(self):
+        yield self.client.set('foo', 'bar', ex=1)
         yield self.client.select(4)
         keys = yield self.client.keys('*')
         self.client.delete(*keys)
@@ -524,7 +527,6 @@ class MigrationTests(base.AsyncTestCase):
         self.redis2_ip = os.getenv('REDIS2_IP', 'localhost')
         self.redis2_port = int(os.getenv('REDIS2_PORT', 6379))
         self.disable_slave()
-        time.sleep(0.5)
 
     @testing.gen_test
     def test_migrate(self):
@@ -535,7 +537,10 @@ class MigrationTests(base.AsyncTestCase):
                                            5000)
         self.assertTrue(result)
 
-        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
+        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10,
+                                    auto_connect=False)
+        yield client.connect()
+
         response = yield client.get(key)
         self.assertEqual(response, value)
         result = yield self.client.get(key)
@@ -549,7 +554,11 @@ class MigrationTests(base.AsyncTestCase):
         result = yield self.client.migrate(self.redis2_ip, 6379, key, 10,
                                            5000, copy=True)
         self.assertTrue(result)
-        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
+
+        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10,
+                                    auto_connect=False)
+        yield client.connect()
+
         result = yield client.get(key)
         self.assertEqual(result, value)
         result = yield self.client.get(key)
@@ -560,7 +569,11 @@ class MigrationTests(base.AsyncTestCase):
         key, value = self.uuid4(2)
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
-        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
+
+        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10,
+                                    auto_connect=False)
+        yield client.connect()
+
         result = yield client.set(key, value, 10)
         self.assertTrue(result)
         with self.assertRaises(exceptions.RedisError):
@@ -572,7 +585,10 @@ class MigrationTests(base.AsyncTestCase):
         result = yield self.expiring_set(key, value)
         self.assertTrue(result)
 
-        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10)
+        client = tredis.RedisClient(self.redis_host, self.redis2_port, 10,
+                                    auto_connect=False)
+        yield client.connect()
+
         result = yield client.set(key, value, 10)
         self.assertTrue(result)
 

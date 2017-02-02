@@ -120,6 +120,7 @@ class ServerMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
+        self._closing = True
         return self._execute([b'QUIT'], b'OK')
 
     def select(self, index=0):
@@ -129,13 +130,18 @@ class ServerMixin(object):
         :param int index: The database to select
         :rtype: bool
         :raises: :exc:`~tredis.exceptions.RedisError`
+        :raises: :exc:`~tredis.exceptions.InvalidClusterCommand`
 
         """
-        result = self._execute(
+        if self._clustering:
+            raise exceptions.InvalidClusterCommand
+        future = self._execute(
             [b'SELECT', ascii(index).encode('ascii')], b'OK')
-        if result:
-            self._current_database = index
-        return result
+
+        def on_selected(f):
+            self._connection.database = index
+        self.io_loop.add_future(future, on_selected)
+        return future
 
     def time(self):
         """Retrieve the current time from the redis server.

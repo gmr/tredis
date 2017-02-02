@@ -123,7 +123,7 @@ class ClusterMixin(object):
                         slots.append((int(sparts[0]), int(sparts[1])))
                     else:
                         slots.append((int(slot), int(slot)))
-                ip_port = self._split_host_port(parts[1])
+                ip_port = common.split_connection_host_port(parts[1])
                 values.append(ClusterNode(
                     parts[0], ip_port[0], ip_port[1], parts[2], parts[3],
                     int(parts[4]), int(parts[5]), int(parts[6]), parts[7],
@@ -158,8 +158,3 @@ class ClusterMixin(object):
 
     def cluster_readwrite(self):
         pass
-
-    @staticmethod
-    def _split_host_port(value):
-        parts = value.split(':')
-        return parts[0], int(parts[1])

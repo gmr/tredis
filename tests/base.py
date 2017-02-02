@@ -5,27 +5,41 @@ import socket
 import time
 import uuid
 
-from tornado import concurrent
-from tornado import testing
+import mock
+from tornado import concurrent, testing
 
 import tredis
+from tredis import common
 
 # os.environ['ASYNC_TEST_TIMEOUT'] = '10'
 
 
+def split_connection_host_port(value):
+    logging.debug('Returning alternate host for %s', value)
+    parts = value.split(':')
+    return os.environ['REDIS_HOST'], int(parts[1])
+
+common.split_connection_host_port = split_connection_host_port
+
+
 class AsyncTestCase(testing.AsyncTestCase):
 
+    AUTO_CONNECT = True
     CLUSTERING = False
     DEFAULT_EXPIRATION = 5
 
     def setUp(self):
         super(AsyncTestCase, self).setUp()
-        self.client = tredis.Client(
+        self.client = self.get_client()
+        self._execute_result = None
+
+    def get_client(self):
+        return tredis.Client(
             [{'host': self.redis_host,
               'port': self.redis_port,
               'db': self.redis_db}],
-            clustering=self.CLUSTERING)
-        self._execute_result = None
+            clustering=self.CLUSTERING,
+            auto_connect=self.AUTO_CONNECT)
 
     def tearDown(self):
         try:
@@ -96,9 +110,3 @@ class AsyncTestCase(testing.AsyncTestCase):
         else:
             future.set_result(self._execute_result)
         return future
-
-    @staticmethod
-    def _split_host_port(value):
-        logging.debug('Returning alternate host for %s', value)
-        parts = value.split(':')
-        return os.environ['REDIS_HOST'], int(parts[1])

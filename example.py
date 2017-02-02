@@ -1,3 +1,4 @@
+import logging
 import os
 import pprint
 
@@ -21,6 +22,7 @@ def run():
     ioloop.IOLoop.current().stop()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     io_loop = ioloop.IOLoop.current()
     io_loop.add_timeout(100, run)
     io_loop.start()

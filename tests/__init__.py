@@ -1,7 +1,5 @@
-import contextlib
 import os
 import logging
-import socket
 
 
 def setup_module():

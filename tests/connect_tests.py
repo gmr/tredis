@@ -14,8 +14,35 @@ from . import base
 
 ADDR_PATTERN = re.compile(r'(addr=([\.\d:]+))')
 
+class BadConnectTestCase(base.AsyncTestCase):
 
-class ConnectTests(base.AsyncTestCase):
+    AUTO_CONNECT = False
+
+    @property
+    def redis_host(self):
+        return '255.255.255.255'
+
+    @testing.gen_test
+    def test_bad_connect_raises_exception(self):
+        with self.assertRaises(exceptions.ConnectError):
+            yield self.client.connect()
+
+
+class BadConnectDBTestCase(base.AsyncTestCase):
+
+    AUTO_CONNECT = False
+
+    @property
+    def redis_db(self):
+        return 255
+
+    @testing.gen_test
+    def test_bad_connect_db_raises_exception(self):
+        with self.assertRaises(exceptions.RedisError):
+            yield self.client.connect()
+
+
+class ConnectTestCase(base.AsyncTestCase):
 
     @gen.coroutine
     def _kill_client(self, client):
@@ -30,20 +57,6 @@ class ConnectTests(base.AsyncTestCase):
         logging.info('CLIENT KILL result: %r', result)
 
     @testing.gen_test
-    def test_bad_connect_raises_exception(self):
-        client = tredis.RedisClient(str(uuid.uuid4()))
-        with self.assertRaises(exceptions.ConnectError):
-            yield client.get('foo')
-
-    @testing.gen_test
-    def test_bad_db_raises_exception(self):
-        client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
-                                    int(os.getenv('REDIS1_PORT', '6379')),
-                                    db=255)
-        with self.assertRaises(exceptions.RedisError):
-            yield client.get('foo')
-
-    @testing.gen_test
     def test_close_invokes_iostream_close(self):
         yield self.client.set('foo', 'bar', 1)  # Establish the connection
         stream = self.client._connection._stream
@@ -56,7 +69,9 @@ class ConnectTests(base.AsyncTestCase):
         on_close = mock.Mock()
         client = tredis.RedisClient(os.getenv('REDIS_HOST', 'localhost'),
                                     int(os.getenv('REDIS1_PORT', '6379')), 0,
-                                    on_close)
+                                    on_close,
+                                    auto_connect=False)
+        yield client.connect()
         result = yield client.set('foo', 'bar', 10)
         self.assertTrue(result)
         yield self._kill_client(client)

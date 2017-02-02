@@ -2,6 +2,20 @@
 Common utility methods
 
 """
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
+
+def maybe_raise_exception(future):
+    if future.exception():
+        raise future.exception()
+
+
+def split_connection_host_port(value):
+    parts = value.split(':')
+    LOGGER.debug('Returning %r', (parts[0], int(parts[1])))
+    return parts[0], int(parts[1])
 
 
 def parse_info_value(value):

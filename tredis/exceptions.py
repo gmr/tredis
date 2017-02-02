@@ -54,3 +54,11 @@ class SubscribedError(TRedisException):
 
     """
     pass
+
+
+class InvalidClusterCommand(TRedisException):
+    """Raised when a method is invoked that is not able to be used when
+    acting as a client for a Redis cluster.
+
+    """
+    pass
