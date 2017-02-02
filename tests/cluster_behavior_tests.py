@@ -35,5 +35,7 @@ class ClusterBehaviorTests(AsyncTestCase):
         except tredis.RedisError as error:
             info = yield self.client.cluster_info()
             pprint.pprint(info)
+            nodes = yield self.client.cluster_nodes()
+            pprint.pprint(nodes)
             raise error
 
