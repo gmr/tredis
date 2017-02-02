@@ -1,6 +1,40 @@
 %YAML 1.2
 ---
-redis:
-  image: gavinmroy/alpine-redis-cluster:3.2.5
-  ports:
-    - 6379
+version: '2'
+services:
+  node1:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6700:6700
+    environment:
+      - REDIS_PORT=6700
+  node2:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6701:6701
+    environment:
+      - REDIS_PORT=6701
+  node3:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6702:6702
+    environment:
+      - REDIS_PORT=6702
+  node4:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6703:6703
+    environment:
+      - REDIS_PORT=6703
+  node5:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6704:6704
+    environment:
+      - REDIS_PORT=6704
+  node6:
+    image: gavinmroy/alpine-redis-cluster:3.2.5
+    ports:
+      - 6705:6705
+    environment:
+      - REDIS_PORT=6705

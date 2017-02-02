@@ -1,14 +1,8 @@
 FROM gliderlabs/alpine:edge
 
-RUN \
-  apk --update add redis && \
-  sed -i 's/^# cluster-enabled yes/cluster-enabled yes/' /etc/redis.conf && \
-  sed -i 's/protected-mode yes/protected-mode no/' /etc/redis.conf && \
-  sed -i 's/^\(bind .*\)$/# \1/' /etc/redis.conf && \
-  sed -i 's/^\(daemonize .*\)$/# \1/' /etc/redis.conf && \
-  sed -i 's/^\(dir .*\)$/# \1\ndir \/data/' /etc/redis.conf && \
-  sed -i 's/^\(logfile .*\)$/# \1/' /etc/redis.conf
+RUN apk --update add redis &&  rm -rf /var/cache/apk/*
+COPY run.sh /usr/local/bin/
 VOLUME /data
 WORKDIR /data
-EXPOSE 6379
-ENTRYPOINT ["redis-server", "/etc/redis.conf"]
+EXPOSE 6700 6701 6702 6703 6704 6705 6706 6707 6708 6709 6710 6711 6712 6713 6714 6715 6716
+ENTRYPOINT ["/usr/local/bin/run.sh"]

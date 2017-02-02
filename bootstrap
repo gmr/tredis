@@ -19,53 +19,59 @@ test -d build || mkdir build
 
 COMPOSE_ARGS="-p tredis"
 
-get_exposed_port() {
+get_exposed_port() {  #  SERVICE PUBLIC-PORT [INDEX [PROTOCOL]]
   if test -n "$3"
   then
-    docker-compose ${COMPOSE_ARGS} port --index=$3 $1 $2 | cut -d: -f2
-  else
-    docker-compose ${COMPOSE_ARGS} port $1 $2 | cut -d: -f2
+    index="--index=$3"
   fi
+  if test -n "$4"
+  then
+    proto="--protocol=$4"
+  fi
+  port=$(docker-compose $COMPOSE_ARGS port $index $proto $1 $2 | cut -d: -f2)
+  if test -z "$port"
+  then
+    exit 1
+  fi
+  echo $port
 }
 
 docker-compose ${COMPOSE_ARGS} stop
 docker-compose ${COMPOSE_ARGS} rm --force
 docker-compose ${COMPOSE_ARGS} up -d redis
-
 docker-compose ${COMPOSE_ARGS} scale redis=2
 
-NODE1=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis_1)
-NODE2=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis_2)
+REDIS1=$(docker inspect --format '{{ .NetworkSettings.Networks.tredis_default.IPAddress }}' tredis_redis_1)
+REDIS2=$(docker inspect --format '{{ .NetworkSettings.Networks.tredis_default.IPAddress }}' tredis_redis_2)
 
-echo "Making NODE2 a slave of NODE1: "
-COMMAND="redis-cli SLAVEOF ${NODE1} 6379"
+echo "Making REDIS2 a slave of REDIS1: "
+COMMAND="redis-cli SLAVEOF ${REDIS1} 6379"
 docker exec -t -i tredis_redis_2 ${COMMAND}
 
-docker-compose ${COMPOSE_ARGS} up -d redis-cluster
-docker-compose ${COMPOSE_ARGS} scale redis-cluster=6
+docker-compose ${COMPOSE_ARGS} up -d node1 node2 node3
 
-NODE3=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_1)
-NODE4=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_2)
-NODE5=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' tredis_redis-cluster_3)
+NODE1=$(docker inspect --format '{{ .NetworkSettings.Networks.tredis_default.IPAddress }}' tredis_node1_1)
+NODE2=$(docker inspect --format '{{ .NetworkSettings.Networks.tredis_default.IPAddress }}' tredis_node2_1)
+NODE3=$(docker inspect --format '{{ .NetworkSettings.Networks.tredis_default.IPAddress }}' tredis_node3_1)
 
 # Create a cluster
 echo "Creating a redis cluster with 3 nodes"
-COMMAND="create --replicas 0 ${NODE3}:6379 ${NODE4}:6379 ${NODE5}:6379"
-docker run --rm -t -i gavinmroy/redis-trib:latest ${COMMAND}
+COMMAND="create --replicas 0 ${NODE1}:6700 ${NODE2}:6701 ${NODE3}:6702"
+docker run --network tredis_default --rm -t -i gavinmroy/redis-trib:latest ${COMMAND}
 
 cat > build/test-environment <<EOF
 export DOCKER_IP=${DOCKER_IP}
 export REDIS_HOST=${DOCKER_IP}
 export REDIS_PORT=6379
+export REDIS1_IP=${REDIS1}
+export REDIS1_PORT=$(get_exposed_port redis 6379 1)
+export REDIS2_IP=${REDIS2}
+export REDIS2_PORT=$(get_exposed_port redis 6379 2)
 export NODE1_IP=${NODE1}
-export NODE1_PORT=$(get_exposed_port redis 6379 1)
+export NODE1_PORT=6700
 export NODE2_IP=${NODE2}
-export NODE2_PORT=$(get_exposed_port redis 6379 2)
+export NODE2_PORT=6701
 export NODE3_IP=${NODE3}
-export NODE3_PORT=$(get_exposed_port redis-cluster 6379 1)
-export NODE4_IP=${NODE4}
-export NODE4_PORT=$(get_exposed_port redis-cluster 6379 2)
-export NODE5_IP=${NODE5}
-export NODE5_PORT=$(get_exposed_port redis-cluster 6379 3)
+export NODE3_PORT=6702
 EOF
 echo "\nDon't forget to 'source build/test-environment'"
