@@ -12,18 +12,18 @@ def parse_info_value(value):
 
     """
     try:
-        if b'.' in value:
+        if '.' in value:
             return float(value)
         else:
             return int(value)
     except ValueError:
-        if b',' in value or b'=' in value:
+        if ',' in value or '=' in value:
             retval = {}
-            for row in value.split(b','):
-                key, val = row.rsplit(b'=', 1)
-                retval[key.decode('utf-8')] = parse_info_value(val)
+            for row in value.split(','):
+                key, val = row.rsplit('=', 1)
+                retval[key] = parse_info_value(val)
             return retval
-        return value.decode('utf-8')
+        return value
 
 
 def format_info_response(value):
@@ -34,10 +34,10 @@ def format_info_response(value):
 
     """
     info = {}
-    for line in value.splitlines():
-        if line.startswith(b'#'):
+    for line in value.decode('utf-8').splitlines():
+        if not line or line[0] == '#':
             continue
-        if b':' in line:
-            key, value = line.split(b':', 1)
-            info[key.decode('utf-8')] = parse_info_value(value)
+        if ':' in line:
+            key, value = line.split(':', 1)
+            info[key] = parse_info_value(value)
     return info

@@ -67,7 +67,7 @@ class _Connection(object):
         self._default_db = int(db or DEFAULT_DB)
         self._client = tcpclient.TCPClient()
         self._cluster_node = cluster_node
-        self._read_only=read_only
+        self._read_only = read_only
         self._slots = slots
         self._stream = None
         self._on_close = on_close

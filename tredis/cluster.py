@@ -112,7 +112,7 @@ class ClusterMixin(object):
         """
         def format_response(result):
             values = []
-            for row in result.split('\n'):
+            for row in result.decode('utf-8').split('\n'):
                 if not row:
                     continue
                 parts = row.split(' ')
