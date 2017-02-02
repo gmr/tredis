@@ -12,6 +12,7 @@ install:
   - pip install wheel
 before_script:
   - ./bootstrap 127.0.0.1
+  - sleep 10
 script:
   - source build/test-environment
   - nosetests
