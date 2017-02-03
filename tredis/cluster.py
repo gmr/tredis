@@ -7,6 +7,35 @@ ClusterNode = collections.namedtuple('ClusterNode', [
     'id', 'ip', 'port', 'flags', 'master', 'ping_sent', 'pong_recv',
     'config_epoch', 'link_state', 'slots'
 ])
+""":class:`tredis.cluster.ClusterNode` is a :class:`~namedtuple` that contains
+the attributes for a single node returned by the ``CLUSTER NODES`` command.
+
+:param bytes id: The node ID
+:param bytes ip: The IP address of the node
+:param int port: The node TCP port
+:param bytes flags: A list of comma separated flags: ``myself``, ``master``,
+    ``slave``, ``fail?``, ``fail``, ``handshake``, ``noaddr``, ``noflags``.
+:param bytes master: If the node is a slave, and the master is known, the master
+    node ID, otherwise the ``-`` character.
+:param int ping_sent: Milliseconds unix time at which the currently active ping
+    was sent, or zero if there are no pending pings.
+:param int pong_recv: Milliseconds unix time the last pong was received.
+:param int config_epoch: The configuration epoch (or version) of the current
+    node (or of the current master if the node is a slave). Each time there is
+    a failover, a new, unique, monotonically increasing configuration epoch is
+    created. If multiple nodes claim to serve the same hash slots, the one with
+    higher configuration epoch wins.
+:param bytes link_state: The state of the link used for the node-to-node cluster
+    bus. We use this link to communicate with the node. Can be ``connected`` or
+    ``disconnected``.
+:param slots: A hash slot number or range. There may be up to 16384 entries in
+    total (limit never reached). This is the list of hash slots served by this
+    node. If the entry is just a number, is parsed as such. If it is a range,
+    it is in the form start-end, and means that the node is responsible for
+    all the hash slots from start to end including the start and end values.
+:type slots: list(tuple(int, int))
+
+"""
 
 
 class ClusterMixin(object):
@@ -110,7 +139,7 @@ class ClusterMixin(object):
 
         .. versionadded:: 0.7.0
 
-        :rtype: list(dict)
+        :rtype: list(:class:`~tredis.cluster.ClusterNode`)
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """

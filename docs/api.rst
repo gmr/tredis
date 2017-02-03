@@ -12,6 +12,8 @@ a Redis command you are looking for.
     :members:
     :inherited-members:
 
+.. autoclass:: tredis.cluster.ClusterNode
+
 .. autoclass:: tredis.RedisClient
     :members:
     :inherited-members:
