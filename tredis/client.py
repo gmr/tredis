@@ -352,10 +352,8 @@ class Client(server.ServerMixin,
         """
         if self._clustering:
             return (all([c.connected for c in self._cluster.values()]) and
-                    len(self._cluster) and
-                    self._connected.is_set())
-        return (self._connected.is_set() and
-                self._connection and
+                    len(self._cluster))
+        return (self._connection and
                 self._connection.connected)
 
     def _build_command(self, parts):
