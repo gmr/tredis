@@ -134,6 +134,12 @@ class _Connection(object):
 
     @property
     def name(self):
+        """Return the connection name as it is returned in the cluster nodes
+        command.
+
+        :rtype: str
+
+        """
         return '{}:{}'.format(self.host, self.port)
 
     def read(self, callback):
@@ -146,13 +152,27 @@ class _Connection(object):
         self._stream.read_bytes(65536, callback, None, True)
 
     def set_read_only(self, read_only):
+        """Change the connection's read-only flag in the client.
+
+        :param bool read_only: Value to set
+        """
         self._read_only = read_only
 
     def set_slots(self, slots):
+        """Change the connection's slot list in the client.
+
+        :param list slots: The updated slot values
+
+        """
         self._slots = slots
 
     @property
     def slots(self):
+        """Return the connection's slot values for clustering.
+
+        :rtype: list
+
+        """
         return self._slots
 
     def _on_closed(self):
@@ -213,12 +233,61 @@ class Client(server.ServerMixin,
              cluster.ClusterMixin,
              scripting.ScriptingMixin,
              transactions.TransactionsMixin):
-    """Base client with common functionality for both the RedisClient and the
-    ClusterClient.
+    """Asynchronous Redis client that supports Redis with master/slave failover
+    and clustering. When :arg:`clustering` is `True`, the client will
+    automatically discover all of the nodes in the cluster and connect to them.
+
+    The :arg:`hosts` argument should contain a list of Redis servers to connect
+    to. The connection information for the server should be a :class:`dict`. In
+    the following example, the client will connect to Redis running at
+    ``127.0.0.1`` on port ``6379`` using database # ``2``:
+
+    .. code:: python
+
+        class RequestHandler(web.RequestHandler):
+
+            @gen.coroutine
+            def connect_to_redis(self)
+                client = tredis.Client([{
+                        'host': '127.0.0.1', 'port': 6379, 'db': 2
+                    }, auto_connect=False, cluster=True]
+                yield client.connect()
+
+    When :arg:`auto_connect` is set to ``True``, the connection to the Redis
+    server or the Redis cluster starts on creation of the client. You should be
+    aware that this will not block on creation and the connection will be
+    established asynchronously in the background. Any requests made with the
+    client while it is connecting will block until the connection is available.
+
+    When :arg:`auto_connect` is set to ``False``, you will need to invoke the
+    :meth:`~tredis.Client.connect` method, yielding to the
+    :class:`~tornado.concurrent.Future` that it returns.
+
+    .. added: 0.7.0
+
+    :param hosts: A list of host connection values.
+    :type hosts: list(dict)
+    :param io_loop: Override the current Tornado IOLoop instance
+    :type io_loop: tornado.ioloop.IOLoop
+    :param method on_close: The method to call if the connection is closed
+    :param bool clustering: Toggle the cluster support in the client
+    :param bool auto_connect: Toggle the auto-connect on creation feature
+
 
     """
     def __init__(self, hosts, on_close=None, io_loop=None, clustering=False,
                  auto_connect=True):
+        """Create a new instance of the ``Client`` class.
+
+        :param hosts: A list of host connection values.
+        :type hosts: list(dict)
+        :param io_loop: Override the current Tornado IOLoop instance
+        :type io_loop: tornado.ioloop.IOLoop
+        :param method on_close: The method to call if the connection is closed
+        :param bool clustering: Toggle the cluster support in the client
+        :param bool auto_connect: Toggle the auto-connect on creation feature
+
+        """
         self._buffer = bytes()
         self._busy = locks.Lock()
         self._closing = False
@@ -240,6 +309,11 @@ class Client(server.ServerMixin,
             self.connect()
 
     def connect(self):
+        """Connect to the Redis server or Cluster.
+
+        :rtype: tornado.concurrent.Future
+
+        """
         LOGGER.debug('Creating a%s connection to %s:%s (db %s)',
                      ' cluster node' if self._clustering else '',
                      self._hosts[0]['host'], self._hosts[0]['port'],
@@ -254,6 +328,11 @@ class Client(server.ServerMixin,
         return self._connect_future
 
     def close(self):
+        """Close any open connections to Redis.
+
+        :raises: :exc:`tredis.exceptions.ConnectionError`
+
+        """
         if not self._connected.is_set():
             raise exceptions.ConnectionError('not connected')
         self._closing = True
@@ -265,10 +344,19 @@ class Client(server.ServerMixin,
 
     @property
     def ready(self):
+        """Indicates that the client is connected to the Redis server or
+        cluster and is ready for use.
+
+        :rtype: bool
+
+        """
         if self._clustering:
-            return all([c.connected for c in self._cluster.values()]) and \
-                    len(self._cluster)
-        return self._connection and self._connection.connected
+            return (all([c.connected for c in self._cluster.values()]) and
+                    len(self._cluster) and
+                    self._connected.is_set())
+        return (self._connected.is_set() and
+                self._connection and
+                self._connection.connected)
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
@@ -280,6 +368,12 @@ class Client(server.ServerMixin,
         return self._encode_resp(parts)
 
     def _create_cluster_connection(self, node):
+        """Create a connection to a Redis server.
+
+        :param node: The node to connect to
+        :type node: tredis.cluster.ClusterNode
+
+        """
         LOGGER.debug('Creating a cluster connection to %s:%s',
                      node.ip, node.port)
         conn = _Connection(
@@ -314,6 +408,16 @@ class Client(server.ServerMixin,
 
     @staticmethod
     def _eval_expectation(command, response, future):
+        """Evaluate the response from Redis to see if it matches the expected
+        response.
+
+        :param command: The command that is being evaluated
+        :type command: tredis.client.Command
+        :param bytes response: The response value to check
+        :param future: The future representing the execution of the command
+        :type future: tornado.concurrent.Future
+        :return:
+        """
         if isinstance(command.expectation, int) and command.expectation > 1:
             future.set_result(response == command.expectation or response)
         else:
@@ -368,6 +472,13 @@ class Client(server.ServerMixin,
         return future
 
     def _on_cluster_discovery(self, future):
+        """Invoked when the Redis server has responded to the ``CLUSTER_NODES``
+        command.
+
+        :param future: The future containing the response from Redis
+        :type future: tornado.concurrent.Future
+
+        """
         LOGGER.debug('_on_cluster_discovery(%r)', future)
         common.maybe_raise_exception(future)
         nodes = future.result()
@@ -383,6 +494,7 @@ class Client(server.ServerMixin,
         self._discovery = True
 
     def _on_closed(self):
+        """Invoked by connections when they are closed."""
         self._connected.clear()
         if not self._closing:
             if self._on_close_callback:
@@ -391,6 +503,15 @@ class Client(server.ServerMixin,
                 raise exceptions.ConnectionError('closed')
 
     def _on_cluster_data_moved(self, response, command, future):
+        """Process the ``MOVED`` response from a Redis cluster node.
+
+        :param bytes response: The response from the Redis server
+        :param command: The command that was being executed
+        :type command: tredis.client.Command
+        :param future: The execution future
+        :type future: tornado.concurrent.Future
+
+        """
         LOGGER.debug('on_cluster_data_moved(%r, %r, %r)',
                      response, command, future)
         parts = response.split(' ')
@@ -403,6 +524,14 @@ class Client(server.ServerMixin,
             command._replace(connection=self._cluster[name]), future)
 
     def _on_connected(self, future):
+        """Invoked when connections have been established. If the client is
+        in clustering mode, it will kick of the discovery step if needed. If
+        not, it will select the configured database.
+
+        :param future: The connection future
+        :type future: tornado.concurrent.Future
+
+        """
         if future.exception():
             self._connect_future.set_exception(future.exception())
             return
@@ -437,7 +566,17 @@ class Client(server.ServerMixin,
             cmd.connection.execute(cmd, select_future)
 
     def _on_read_only_error(self, command, future):
+        """Invoked when a Redis node returns an error indicating it's in
+        read-only mode. It will use the ``INFO REPLICATION`` command to
+        attempt to find the master server and failover to that, reissuing
+        the command to that server.
 
+        :param command: The command that was being executed
+        :type command: tredis.client.Command
+        :param future: The execution future
+        :type future: tornado.concurrent.Future
+
+        """
         failover_future = concurrent.TracebackFuture()
 
         def on_replication_info(_):
@@ -481,6 +620,16 @@ class Client(server.ServerMixin,
         cmd.connection.execute(cmd, failover_future)
 
     def _read(self, command, future):
+        """Invoked when a command is executed to read and parse its results.
+        It will loop on the IOLoop until the response is complete and then
+        set the value of the response in the execution future.
+
+        :param command: The command that was being executed
+        :type command: tredis.client.Command
+        :param future: The execution future
+        :type future: tornado.concurrent.Future
+
+        """
         response = self._reader.gets()
         if response is not False:
             if isinstance(response, hiredis.ReplyError):
@@ -506,11 +655,15 @@ class Client(server.ServerMixin,
             command.connection.read(on_data)
 
     def _pick_cluster_host(self, value):
-        LOGGER.debug('_pick_cluster_host(%r)', value)
+        """Selects the Redis cluster host for the specified value.
+
+        :param mixed value: The value to use when looking for the host
+        :rtype: tredis.client._Connection
+
+        """
         crc = crc16.crc16(self._encode_resp(value[1])) % HASH_SLOTS
         for host in self._cluster.keys():
             for slot in self._cluster[host].slots:
-                LOGGER.debug('%s: Slots: %r (%r)', host, slot, crc)
                 if slot[0] <= crc <= slot[1]:
                     return self._cluster[host]
         LOGGER.debug('Host not found for %r, returning first connection',
@@ -521,8 +674,7 @@ class Client(server.ServerMixin,
 
 class RedisClient(Client):
     """A simple asynchronous Redis client with a subset of overall Redis
-    functionality. The client will automatically connect the first time you
-    issue a command to the Redis server. The following example demonstrates
+    functionality. The following example demonstrates
     how to set a key in Redis and then retrieve it.
 
     .. code-block:: python
@@ -537,6 +689,8 @@ class RedisClient(Client):
     :param int port: The port to connect on
     :param int db: The database number to use
     :param method on_close: The method to call if the connection is closed
+    :param bool clustering: Toggle the cluster support in the client
+    :param bool auto_connect: Toggle the auto-connect on creation feature
 
     """
     def __init__(self,
@@ -544,7 +698,8 @@ class RedisClient(Client):
                  port=DEFAULT_PORT,
                  db=DEFAULT_DB,
                  on_close=None,
+                 clustering=False,
                  auto_connect=False):
         super(RedisClient, self).__init__(
             [{'host': host, 'port': port, 'db': db}],
-            on_close, clustering=False, auto_connect=auto_connect)
+            on_close, clustering=clustering, auto_connect=auto_connect)
