@@ -37,6 +37,8 @@ class ClusterMixin(object):
         """``CLUSTER INFO`` provides ``INFO`` style information about Redis
         Cluster vital parameters.
 
+        .. versionadded:: 0.7.0
+
         :returns: A dictionary of current cluster information
         :rtype: dict
 
@@ -105,6 +107,8 @@ class ClusterMixin(object):
         ``CLUSTER NODES``, that provides more information, should be used for
         administrative tasks, debugging, and configuration inspections. It is
         also used by ``redis-trib`` in order to manage a cluster.
+
+        .. versionadded:: 0.7.0
 
         :rtype: list(dict)
         :raises: :exc:`~tredis.exceptions.RedisError`

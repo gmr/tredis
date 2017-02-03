@@ -5,7 +5,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Category     | Count    | Version Added |
 +==============+==========+===============+
-| Cluster      | 0 of 20  | —             |
+| Cluster      | 2 of 20  | 0.7.0         |
 +--------------+----------+---------------+
 | Connection   | 5 of 5   | 0.1.0         |
 +--------------+----------+---------------+

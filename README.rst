@@ -17,7 +17,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Category     | Count    |
 +==============+==========+
-| Cluster      | 0 of 20  |
+| Cluster      | 2 of 20  |
 +--------------+----------+
 | Connection   | 5 of 5   |
 +--------------+----------+
@@ -53,10 +53,28 @@ Example
 
 .. code:: python
 
-   client = tredis.RedisClient()
+   import logging
+   import pprint
 
-   yield client.set('foo', 'bar')
-   value = yield client.get('foo')
+   from tornado import gen, ioloop
+   import tredis
+
+
+   @gen.engine
+   def run():
+       client = tredis.Client([{"host": "127.0.0.1", "port": 6379, "db": 0}],
+                              auto_connect=False)
+       yield client.connect()
+       value = yield client.info()
+       pprint.pprint(value)
+       ioloop.IOLoop.current().stop()
+
+   if __name__ == '__main__':
+       logging.basicConfig(level=logging.DEBUG)
+       io_loop = ioloop.IOLoop.current()
+       io_loop.add_callback(run)
+       io_loop.start()
+
 
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis

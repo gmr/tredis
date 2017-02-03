@@ -673,17 +673,9 @@ class Client(server.ServerMixin,
 
 
 class RedisClient(Client):
-    """A simple asynchronous Redis client with a subset of overall Redis
-    functionality. The following example demonstrates
-    how to set a key in Redis and then retrieve it.
+    """This is provided for backwards compatibility for versions < 0.7.
 
-    .. code-block:: python
-       :caption: Simple Example
-
-        client = tredis.RedisClient()
-
-        yield client.strings.set('foo', 'bar')
-        value = yield client.strings.get('foo')
+    .. deprecated:: 0.7
 
     :param str host: The hostname to connect to
     :param int port: The port to connect on
