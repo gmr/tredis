@@ -4,6 +4,8 @@ from tornado import gen, testing
 
 from . import base
 
+os.environ['ASYNC_TEST_TIMEOUT'] = '10'
+
 
 class ClusterTests(base.AsyncTestCase):
 

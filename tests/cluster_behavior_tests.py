@@ -8,7 +8,7 @@ import tredis
 
 from . import base
 
-# os.environ['ASYNC_TEST_TIMEOUT'] = '10'
+os.environ['ASYNC_TEST_TIMEOUT'] = '10'
 
 
 class AsyncTestCase(base.AsyncTestCase):
