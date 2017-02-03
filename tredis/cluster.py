@@ -10,6 +10,8 @@ ClusterNode = collections.namedtuple('ClusterNode', [
 """:class:`tredis.cluster.ClusterNode` is a :class:`~namedtuple` that contains
 the attributes for a single node returned by the ``CLUSTER NODES`` command.
 
+.. versionadded: 0.7
+
 :param bytes id: The node ID
 :param bytes ip: The IP address of the node
 :param int port: The node TCP port
