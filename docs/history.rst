@@ -1,6 +1,11 @@
 Version History
 ===============
 
+- 0.7.0 - released *2017-02-03*
+
+  - Add :meth:`~tredis.Client.zrange`
+  - Add :meth:`~tredis.Client.zrevrange`
+
 - 0.7.0 - released *2017-02-02*
 
   - Add support for Redis Clusters in the new :class:`~tredis.Client` class

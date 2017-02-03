@@ -27,7 +27,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Sets         | 15 of 15 | 0.1.0         |
 +--------------+----------+---------------+
-| Sorted Sets  | 4 of 21  | 0.4.0+        |
+| Sorted Sets  | 6 of 21  | 0.4.0+        |
 +--------------+----------+---------------+
 | Strings      | 23 of 23 | 0.2.0         |
 +--------------+----------+---------------+
