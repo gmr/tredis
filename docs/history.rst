@@ -1,10 +1,13 @@
 Version History
 ===============
 
-- 0.6.0
-  - Added ``ZREM`` to the `Sorted Sets <http://redis.io/commands#sorted_set>`_ commands
+- 0.7.0
+  - Adds support for Redis Clusters in the new :class:`~tredis.Client` class.
+
+- 0.6.0 - released *2017-01-27*
+  - Add :class:`~tredis.Client.zrem` to the `Sorted Sets <http://redis.io/commands#sorted_set>`_ commands
   - Locate master and reconnect when a ``READONLY`` response is received
-  - Add `TIME <https://redis.io/commands/time>`_ command
+  - Add :class:`~tredis.Client.time` command
 
 - 0.5.0 - released *2016-11-08*
 
@@ -13,7 +16,7 @@ Version History
 
 - 0.4.0 - released *2016-01-25*
 
-  - Add Info command
+  - Add :class:`~tredis.Client.info` command
 
 - 0.3.0 - released *2016-01-18*
 
