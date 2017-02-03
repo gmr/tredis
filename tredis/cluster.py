@@ -7,8 +7,9 @@ ClusterNode = collections.namedtuple('ClusterNode', [
     'id', 'ip', 'port', 'flags', 'master', 'ping_sent', 'pong_recv',
     'config_epoch', 'link_state', 'slots'
 ])
-""":class:`tredis.cluster.ClusterNode` is a :class:`~namedtuple` that contains
-the attributes for a single node returned by the ``CLUSTER NODES`` command.
+""":class:`tredis.cluster.ClusterNode` is a :class:`~collections.namedtuple`
+that contains the attributes for a single node returned by the
+``CLUSTER NODES`` command.
 
 .. versionadded: 0.7
 
