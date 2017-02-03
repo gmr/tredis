@@ -1,6 +1,6 @@
 API
 ===
-The :py:class:`RedisClient <tredis.Client>` class is the primary API
+The :py:class:`Client <tredis.Client>` class is the primary API
 interface for interacting with Redis. While the per-method documentation
 attempts to be as complete as possible, the best documentation source for
 each Redis command is available `on the redis site <http://redis.io/commands>`_.

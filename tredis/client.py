@@ -186,8 +186,10 @@ class _Connection(object):
         """Invoked when the socket stream has connected, setting up the
         stream callbacks and invoking the on connect callback if set.
 
-        :param future: The connection response future
-        :type future: :class:`~tornado.concurrent.Future`
+        :param stream_future: The connection socket future
+        :type stream_future: :class:`~tornado.concurrent.Future`
+        :param stream_future: The connection response future
+        :type stream_future: :class:`~tornado.concurrent.Future`
         :raises: :exc:`tredis.exceptions.ConnectError`
 
         """
@@ -234,10 +236,10 @@ class Client(server.ServerMixin,
              scripting.ScriptingMixin,
              transactions.TransactionsMixin):
     """Asynchronous Redis client that supports Redis with master/slave failover
-    and clustering. When :var:`clustering` is `True`, the client will
+    and clustering. When ``clustering`` is ``True``, the client will
     automatically discover all of the nodes in the cluster and connect to them.
 
-    The :var:`hosts` argument should contain a list of Redis servers to connect
+    The ``hosts`` argument should contain a list of Redis servers to connect
     to. The connection information for the server should be a :class:`dict`. In
     the following example, the client will connect to Redis running at
     ``127.0.0.1`` on port ``6379`` using database # ``2``:
@@ -253,13 +255,13 @@ class Client(server.ServerMixin,
                     }, auto_connect=False, cluster=True]
                 yield client.connect()
 
-    When :var:`auto_connect` is set to ``True``, the connection to the Redis
+    When ``auto_connect`` is set to ``True``, the connection to the Redis
     server or the Redis cluster starts on creation of the client. You should be
     aware that this will not block on creation and the connection will be
     established asynchronously in the background. Any requests made with the
     client while it is connecting will block until the connection is available.
 
-    When :var:`auto_connect` is set to ``False``, you will need to invoke the
+    When ``auto_connect`` is set to ``False``, you will need to invoke the
     :meth:`~tredis.Client.connect` method, yielding to the
     :class:`~tornado.concurrent.Future` that it returns.
 
