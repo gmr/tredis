@@ -10,7 +10,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 project = 'TRedis'
-copyright = '2015, Gavin M. Roy'
+copyright = '2015-2017, Gavin M. Roy'
 
 import tredis
 release = tredis.__version__

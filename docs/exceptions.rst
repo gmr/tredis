@@ -7,6 +7,8 @@ Exceptions
 
 .. autoclass:: tredis.exceptions.ConnectionError
 
+.. autoclass:: tredis.exceptions.InvalidClusterCommand
+
 .. autoclass:: tredis.exceptions.AuthError
 
 .. autoclass:: tredis.exceptions.RedisError
