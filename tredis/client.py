@@ -691,7 +691,7 @@ class RedisClient(Client):
                  db=DEFAULT_DB,
                  on_close=None,
                  clustering=False,
-                 auto_connect=False):
+                 auto_connect=True):
         super(RedisClient, self).__init__(
             [{'host': host, 'port': port, 'db': db}],
             on_close, clustering=clustering, auto_connect=auto_connect)
