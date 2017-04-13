@@ -18,7 +18,7 @@ The following examples expect a pre-existing asynchronous application:
                                auto_connect=False)
         yield client.connect()
         yield client.set("foo", "bar")
-        value = client.get("foo")
+        value = yield client.get("foo")
         pprint.pprint(value)
         ioloop.IOLoop.current().stop()
 

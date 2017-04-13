@@ -252,7 +252,7 @@ class Client(server.ServerMixin,
             def connect_to_redis(self)
                 client = tredis.Client([{
                         'host': '127.0.0.1', 'port': 6379, 'db': 2
-                    }, auto_connect=False, cluster=True]
+                    }], auto_connect=False, clustering=True)
                 yield client.connect()
 
     When ``auto_connect`` is set to ``True``, the connection to the Redis
