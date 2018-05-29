@@ -1,7 +1,7 @@
 Version History
 ===============
 
-- next release
+- 0.8.0
 
   - Add `List <http://redis.io/commands#list>`_ commands (9 of 17)
 
