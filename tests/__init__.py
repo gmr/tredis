@@ -4,7 +4,7 @@ import logging
 
 def setup_module():
     try:
-        with open('build/env-vars') as env_file:
+        with open('build/test-environment') as env_file:
             for line_num, line in enumerate(env_file):
                 if line.startswith('export '):
                     line = line[7:].strip()
