@@ -22,7 +22,7 @@ BITOP_NOT = b'~'
 
 _BITOPTS = {
     BITOP_AND: b'AND',
-    BITOP_OR:  b'OR',
+    BITOP_OR: b'OR',
     BITOP_XOR: b'XOR',
     BITOP_NOT: b'NOT',
 }
@@ -136,8 +136,8 @@ class StringsMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`, :exc:`ValueError`
 
         """
-        if (operation not in _BITOPTS.keys() and
-                operation not in _BITOPTS.values()):
+        if (operation not in _BITOPTS.keys()
+                and operation not in _BITOPTS.values()):
             raise ValueError('Invalid operation value: {}'.format(operation))
         elif operation in [b'~', b'NOT'] and len(keys) > 1:
             raise ValueError('NOT can only be used with 1 key')
@@ -510,8 +510,8 @@ class StringsMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        return self._execute([b'PSETEX', key, ascii(milliseconds), value],
-                             b'OK')
+        return self._execute(
+            [b'PSETEX', key, ascii(milliseconds), value], b'OK')
 
     def set(self, key, value, ex=None, px=None, nx=False, xx=False):
         """Set key to hold the string value. If key already holds a value, it

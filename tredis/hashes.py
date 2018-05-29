@@ -68,10 +68,12 @@ class HashesMixin(object):
         .. _HGETALL: http://redis.io/commands/hgetall
 
         """
+
         def format_response(value):
             return dict(zip(value[::2], value[1::2]))
-        return self._execute([b'HGETALL', key],
-                             format_callback=format_response)
+
+        return self._execute(
+            [b'HGETALL', key], format_callback=format_response)
 
     def hmset(self, key, value_dict):
         """
@@ -126,6 +128,7 @@ class HashesMixin(object):
         :rtype: dict
 
         """
+
         def format_response(val_array):
             return dict(zip(fields, val_array))
 
@@ -193,8 +196,8 @@ class HashesMixin(object):
         :rtype: int
 
         """
-        return self._execute([b'HINCRBY', key, field, increment],
-                             format_callback=int)
+        return self._execute(
+            [b'HINCRBY', key, field, increment], format_callback=int)
 
     def hincrbyfloat(self, key, field, increment):
         """
@@ -224,8 +227,8 @@ class HashesMixin(object):
         :rtype: float
 
         """
-        return self._execute([b'HINCRBYFLOAT', key, field, increment],
-                             format_callback=float)
+        return self._execute(
+            [b'HINCRBYFLOAT', key, field, increment], format_callback=float)
 
     def hkeys(self, key):
         """

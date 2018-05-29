@@ -50,9 +50,8 @@ HASH_SLOTS = 16384
 if 'ascii' not in dir(__builtins__):  # pragma: nocover
     from tredis.compat import ascii
 
-
-Command = collections.namedtuple('Command', ['command', 'connection',
-                                             'expectation', 'callback'])
+Command = collections.namedtuple(
+    'Command', ['command', 'connection', 'expectation', 'callback'])
 
 
 class _Connection(object):
@@ -65,8 +64,16 @@ class _Connection(object):
 
     """
 
-    def __init__(self, host, port, db, on_written, on_close, io_loop,
-                 cluster_node=False, read_only=False, slots=None):
+    def __init__(self,
+                 host,
+                 port,
+                 db,
+                 on_written,
+                 on_close,
+                 io_loop,
+                 cluster_node=False,
+                 read_only=False,
+                 slots=None):
         super(_Connection, self).__init__()
         self.connected = False
         self.io_loop = io_loop
@@ -108,8 +115,9 @@ class _Connection(object):
             raise exceptions.ConnectError('already connected')
 
         LOGGER.debug('%s connecting', self.name)
-        self.io_loop.add_future(self._client.connect(self.host, self.port),
-                                lambda f: self._on_connected(f, future))
+        self.io_loop.add_future(
+            self._client.connect(self.host, self.port),
+            lambda f: self._on_connected(f, future))
         return future
 
     def execute(self, command, future):
@@ -125,6 +133,7 @@ class _Connection(object):
         if self.connected:
             self._write(command, future)
         else:
+
             def on_connected(cfuture):
                 if cfuture.exception():
                     return future.set_exception(cfuture.exception())
@@ -221,19 +230,11 @@ class _Connection(object):
             future.set_exception(exceptions.ConnectionError(error))
 
 
-class Client(server.ServerMixin,
-             keys.KeysMixin,
-             strings.StringsMixin,
-             geo.GeoMixin,
-             hashes.HashesMixin,
-             hyperloglog.HyperLogLogMixin,
-             lists.ListsMixin,
-             sets.SetsMixin,
-             sortedsets.SortedSetsMixin,
-             pubsub.PubSubMixin,
-             connection.ConnectionMixin,
-             cluster.ClusterMixin,
-             scripting.ScriptingMixin,
+class Client(server.ServerMixin, keys.KeysMixin, strings.StringsMixin,
+             geo.GeoMixin, hashes.HashesMixin, hyperloglog.HyperLogLogMixin,
+             lists.ListsMixin, sets.SetsMixin, sortedsets.SortedSetsMixin,
+             pubsub.PubSubMixin, connection.ConnectionMixin,
+             cluster.ClusterMixin, scripting.ScriptingMixin,
              transactions.TransactionsMixin):
     """Asynchronous Redis client that supports Redis with master/slave failover
     and clustering. When ``clustering`` is ``True``, the client will
@@ -277,7 +278,12 @@ class Client(server.ServerMixin,
 
 
     """
-    def __init__(self, hosts, on_close=None, io_loop=None, clustering=False,
+
+    def __init__(self,
+                 hosts,
+                 on_close=None,
+                 io_loop=None,
+                 clustering=False,
                  auto_connect=True):
         """Create a new instance of the ``Client`` class.
 
@@ -317,14 +323,18 @@ class Client(server.ServerMixin,
 
         """
         LOGGER.debug('Creating a%s connection to %s:%s (db %s)',
-                     ' cluster node' if self._clustering else '',
-                     self._hosts[0]['host'], self._hosts[0]['port'],
-                     self._hosts[0].get('db', DEFAULT_DB))
+                     ' cluster node'
+                     if self._clustering else '', self._hosts[0]['host'],
+                     self._hosts[0]['port'], self._hosts[0].get(
+                         'db', DEFAULT_DB))
         self._connect_future = concurrent.Future()
         conn = _Connection(
-            self._hosts[0]['host'], self._hosts[0]['port'],
+            self._hosts[0]['host'],
+            self._hosts[0]['port'],
             self._hosts[0].get('db', DEFAULT_DB),
-            self._read, self._on_closed, self.io_loop,
+            self._read,
+            self._on_closed,
+            self.io_loop,
             cluster_node=self._clustering)
         self.io_loop.add_future(conn.connect(), self._on_connected)
         return self._connect_future
@@ -353,10 +363,9 @@ class Client(server.ServerMixin,
 
         """
         if self._clustering:
-            return (all([c.connected for c in self._cluster.values()]) and
-                    len(self._cluster))
-        return (self._connection and
-                self._connection.connected)
+            return (all([c.connected for c in self._cluster.values()])
+                    and len(self._cluster))
+        return (self._connection and self._connection.connected)
 
     def _build_command(self, parts):
         """Build the command that will be written to Redis via the socket
@@ -374,11 +383,17 @@ class Client(server.ServerMixin,
         :type node: tredis.cluster.ClusterNode
 
         """
-        LOGGER.debug('Creating a cluster connection to %s:%s',
-                     node.ip, node.port)
+        LOGGER.debug('Creating a cluster connection to %s:%s', node.ip,
+                     node.port)
         conn = _Connection(
-            node.ip, node.port, 0, self._read, self._on_closed, self.io_loop,
-            cluster_node=True, read_only='slave' in node.flags,
+            node.ip,
+            node.port,
+            0,
+            self._read,
+            self._on_closed,
+            self.io_loop,
+            cluster_node=True,
+            read_only='slave' in node.flags,
             slots=node.slots)
         self.io_loop.add_future(conn.connect(), self._on_connected)
 
@@ -390,8 +405,9 @@ class Client(server.ServerMixin,
 
         """
         if isinstance(value, bytes):
-            return b''.join([b'$', ascii(len(value)).encode('ascii'), CRLF,
-                             value, CRLF])
+            return b''.join(
+                [b'$',
+                 ascii(len(value)).encode('ascii'), CRLF, value, CRLF])
         elif isinstance(value, str):  # pragma: nocover
             return self._encode_resp(value.encode('utf-8'))
         elif isinstance(value, int):
@@ -444,16 +460,14 @@ class Client(server.ServerMixin,
         def on_locked(_):
             if self.ready:
                 if self._clustering:
-                    cmd = Command(command,
-                                  self._pick_cluster_host(parts),
+                    cmd = Command(command, self._pick_cluster_host(parts),
                                   expectation, format_callback)
                 else:
                     LOGGER.debug('Connection: %r', self._connection)
-                    cmd = Command(command, self._connection,
-                                  expectation, format_callback)
-                LOGGER.debug('_execute(%r, %r, %r) on %s',
-                             cmd.command, expectation, format_callback,
-                             cmd.connection.name)
+                    cmd = Command(command, self._connection, expectation,
+                                  format_callback)
+                LOGGER.debug('_execute(%r, %r, %r) on %s', cmd.command,
+                             expectation, format_callback, cmd.connection.name)
                 cmd.connection.execute(cmd, future)
             else:
                 LOGGER.critical('Lock released & not ready, aborting command')
@@ -462,8 +476,8 @@ class Client(server.ServerMixin,
         if not self.ready and not self._connected.is_set():
             self.io_loop.add_future(
                 self._connected.wait(),
-                lambda f: self.io_loop.add_future(
-                    self._busy.acquire(), on_locked))
+                lambda f: self.io_loop.add_future(self._busy.acquire(), on_locked)
+            )
         else:
             self.io_loop.add_future(self._busy.acquire(), on_locked)
 
@@ -512,8 +526,8 @@ class Client(server.ServerMixin,
         :type future: tornado.concurrent.Future
 
         """
-        LOGGER.debug('on_cluster_data_moved(%r, %r, %r)',
-                     response, command, future)
+        LOGGER.debug('on_cluster_data_moved(%r, %r, %r)', response, command,
+                     future)
         parts = response.split(' ')
         name = '{}:{}'.format(*common.split_connection_host_port(parts[2]))
         LOGGER.debug('Moved to %r', name)
@@ -537,9 +551,8 @@ class Client(server.ServerMixin,
             return
 
         conn = future.result()
-        LOGGER.debug('Connected to %s (%r, %r, %r)',
-                     conn.name, self._clustering, self._discovery,
-                     self._connected)
+        LOGGER.debug('Connected to %s (%r, %r, %r)', conn.name,
+                     self._clustering, self._discovery, self._connected)
         if self._clustering:
             self._cluster[conn.name] = conn
             if not self._discovery:
@@ -551,6 +564,7 @@ class Client(server.ServerMixin,
                     self._connect_future.set_result(True)
                 self._connected.set()
         else:
+
             def on_selected(sfuture):
                 LOGGER.debug('Initial setup and selection processed')
                 if sfuture.exception():
@@ -558,11 +572,13 @@ class Client(server.ServerMixin,
                 else:
                     self._connect_future.set_result(True)
                 self._connected.set()
+
             select_future = concurrent.Future()
             self.io_loop.add_future(select_future, on_selected)
             self._connection = conn
-            cmd = Command(self._build_command(['SELECT', str(conn.database)]),
-                          self._connection, None, None)
+            cmd = Command(
+                self._build_command(['SELECT', str(conn.database)]),
+                self._connection, None, None)
             cmd.connection.execute(cmd, select_future)
 
     def _on_read_only_error(self, command, future):
@@ -589,11 +605,10 @@ class Client(server.ServerMixin,
             self._connect_future = concurrent.Future()
 
             info = failover_future.result()
-            LOGGER.debug('Failover connecting to %s:%s',
-                         info['master_host'], info['master_port'])
+            LOGGER.debug('Failover connecting to %s:%s', info['master_host'],
+                         info['master_port'])
             self._connection = _Connection(
-                info['master_host'], info['master_port'],
-                database, self._read,
+                info['master_host'], info['master_port'], database, self._read,
                 self._on_closed, self.io_loop, self._clustering)
 
             # When the connection is re-established, re-run the command
@@ -612,9 +627,9 @@ class Client(server.ServerMixin,
         LOGGER.debug('%s is read-only, need to failover to new master',
                      command.connection.name)
 
-        cmd = Command(self._build_command(['INFO', 'REPLICATION']),
-                      self._connection,
-                      None, common.format_info_response)
+        cmd = Command(
+            self._build_command(['INFO', 'REPLICATION']), self._connection,
+            None, common.format_info_response)
 
         self.io_loop.add_future(failover_future, on_replication_info)
         cmd.connection.execute(cmd, failover_future)
@@ -634,8 +649,8 @@ class Client(server.ServerMixin,
         if response is not False:
             if isinstance(response, hiredis.ReplyError):
                 if response.args[0].startswith('MOVED '):
-                    self._on_cluster_data_moved(
-                        response.args[0], command, future)
+                    self._on_cluster_data_moved(response.args[0], command,
+                                                future)
                 elif response.args[0].startswith('READONLY '):
                     self._on_read_only_error(command, future)
                 else:
@@ -647,6 +662,7 @@ class Client(server.ServerMixin,
             else:
                 future.set_result(response)
         else:
+
             def on_data(data):
                 # LOGGER.debug('Read %r', data)
                 self._reader.feed(data)
@@ -685,6 +701,7 @@ class RedisClient(Client):
     :param bool auto_connect: Toggle the auto-connect on creation feature
 
     """
+
     def __init__(self,
                  host=DEFAULT_HOST,
                  port=DEFAULT_PORT,
@@ -693,5 +710,11 @@ class RedisClient(Client):
                  clustering=False,
                  auto_connect=True):
         super(RedisClient, self).__init__(
-            [{'host': host, 'port': port, 'db': db}],
-            on_close, clustering=clustering, auto_connect=auto_connect)
+            [{
+                'host': host,
+                'port': port,
+                'db': db
+            }],
+            on_close,
+            clustering=clustering,
+            auto_connect=auto_connect)
