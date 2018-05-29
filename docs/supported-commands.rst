@@ -17,7 +17,7 @@ The following table summarizes the number of commands supported by category:
 +--------------+----------+---------------+
 | Keys         | 22 of 22 | 0.1.0         |
 +--------------+----------+---------------+
-| Lists        | 0 of 17  | —             |
+| Lists        | 9 of 17  | future        |
 +--------------+----------+---------------+
 | Pub/Sub      | 0 of 6   | -             |
 +--------------+----------+---------------+

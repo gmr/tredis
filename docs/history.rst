@@ -1,6 +1,10 @@
 Version History
 ===============
 
+- next release
+
+  - Add `List <http://redis.io/commands#list>`_ commands (9 of 17)
+
 - 0.7.0 - released *2017-02-03*
 
   - Add :meth:`~tredis.Client.zrange`
