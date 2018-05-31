@@ -140,6 +140,7 @@ class ServerMixin(object):
 
         def on_selected(f):
             self._connection.database = index
+
         self.io_loop.add_future(future, on_selected)
         return future
 
@@ -150,6 +151,7 @@ class ServerMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
+
         def format_response(value):
             """Format a TIME response into a datetime.datetime
 
@@ -161,4 +163,5 @@ class ServerMixin(object):
             """
             seconds, micros = value
             return float(seconds) + (float(micros) / 1000000.0)
+
         return self._execute([b'TIME'], format_callback=format_response)

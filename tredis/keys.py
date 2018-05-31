@@ -146,7 +146,8 @@ class KeysMixin(object):
 
         """
         return self._execute(
-            [b'EXPIREAT', key, ascii(timestamp).encode('ascii')], 1)
+            [b'EXPIREAT', key,
+             ascii(timestamp).encode('ascii')], 1)
 
     def keys(self, pattern):
         """Returns all keys matching pattern.
@@ -224,9 +225,12 @@ class KeysMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        command = [b'MIGRATE', host, ascii(port).encode('ascii'),
-                   key, ascii(destination_db).encode('ascii'),
-                   ascii(timeout).encode('ascii')]
+        command = [
+            b'MIGRATE', host,
+            ascii(port).encode('ascii'), key,
+            ascii(destination_db).encode('ascii'),
+            ascii(timeout).encode('ascii')
+        ]
         if copy is True:
             command.append(b'COPY')
         if replace is True:
@@ -358,7 +362,8 @@ class KeysMixin(object):
 
         """
         return self._execute(
-            [b'PEXPIREAT', key, ascii(timestamp).encode('ascii')], 1)
+            [b'PEXPIREAT', key,
+             ascii(timestamp).encode('ascii')], 1)
 
     def pttl(self, key):
         """Like :meth:`~tredis.RedisClient.ttl` this command returns the
@@ -603,8 +608,11 @@ class KeysMixin(object):
         elif external:
             command += [b'GET', external]
         if limit:
-            command += [b'LIMIT', ascii(offset).encode('utf-8'),
-                        ascii(limit).encode('utf-8')]
+            command += [
+                b'LIMIT',
+                ascii(offset).encode('utf-8'),
+                ascii(limit).encode('utf-8')
+            ]
         if order:
             command.append(order)
         if alpha is True:
@@ -670,6 +678,9 @@ class KeysMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        command = [b'WAIT', ascii(num_slaves).encode('ascii'),
-                   ascii(timeout).encode('ascii')]
+        command = [
+            b'WAIT',
+            ascii(num_slaves).encode('ascii'),
+            ascii(timeout).encode('ascii')
+        ]
         return self._execute(command)

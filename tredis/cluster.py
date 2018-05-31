@@ -113,8 +113,8 @@ class ClusterMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
-        return self._execute([b'CLUSTER', 'INFO'],
-                             format_callback=common.format_info_response)
+        return self._execute(
+            [b'CLUSTER', 'INFO'], format_callback=common.format_info_response)
 
     def cluster_key_slot(self, key):
         pass
@@ -146,6 +146,7 @@ class ClusterMixin(object):
         :raises: :exc:`~tredis.exceptions.RedisError`
 
         """
+
         def format_response(result):
             values = []
             for row in result.decode('utf-8').split('\n'):
@@ -160,13 +161,14 @@ class ClusterMixin(object):
                     else:
                         slots.append((int(slot), int(slot)))
                 ip_port = common.split_connection_host_port(parts[1])
-                values.append(ClusterNode(
-                    parts[0], ip_port[0], ip_port[1], parts[2], parts[3],
-                    int(parts[4]), int(parts[5]), int(parts[6]), parts[7],
-                    slots))
+                values.append(
+                    ClusterNode(parts[0], ip_port[0], ip_port[1], parts[2],
+                                parts[3], int(parts[4]), int(parts[5]),
+                                int(parts[6]), parts[7], slots))
             return values
-        return self._execute(['CLUSTER', 'NODES'],
-                             format_callback=format_response)
+
+        return self._execute(
+            ['CLUSTER', 'NODES'], format_callback=format_response)
 
     def cluster_replicate(self, node_id):
         pass

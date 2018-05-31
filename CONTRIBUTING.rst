@@ -11,7 +11,7 @@ To get setup in the environment and run the tests, take the following steps:
     source env/bin/activate
 
     ./bootstrap
-    source build/env-vars
+    source build/test-environment
 
     nosetests
 
