@@ -1,2 +1,2 @@
-tornado>4.0
+tornado>4.0,<5
 hiredis>=0.2.0,<1
