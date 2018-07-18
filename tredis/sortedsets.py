@@ -87,6 +87,22 @@ class SortedSetsMixin(object):
             command += list(members)
         return self._execute(command)
 
+    def zcard(self, key):
+        """Returns the set cardinality (number of elements) of the sorted set
+        stored at key.
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param key: The key of the set
+        :type key: :class:`str`, :class:`bytes`
+        :rtype: int
+        :raises: :exc:`~tredis.exceptions.RedisError`
+
+        """
+        return self._execute([b'ZCARD', key])
+
     def zrange(self, key, start=0, stop=-1, with_scores=False):
         """Returns the specified range of elements in the sorted set stored at
         key. The elements are considered to be ordered from the lowest to the
@@ -291,3 +307,22 @@ class SortedSetsMixin(object):
         if with_scores:
             command += ['WITHSCORES']
         return self._execute(command)
+
+    def zscore(self, key, member):
+        """Returns the score of member in the sorted set at key.
+        If member does not exist in the sorted set, or key does not exist
+        None is returned.
+
+        .. note::
+
+           **Time complexity**: ``O(1)``
+
+        :param key: The key of the set to check for membership in
+        :type key: :class:`str`, :class:`bytes`
+        :param member: The value to check for set membership with
+        :type member: :class:`str`, :class:`bytes`
+        :rtype: str or None
+        :raises: :exc:`~tredis.exceptions.RedisError`
+
+        """
+        return self._execute([b'ZSCORE', key, member])

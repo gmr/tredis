@@ -79,6 +79,21 @@ class SortedSetTests(base.AsyncTestCase):
                 yield self.client.zadd(key, score, value)
 
     @testing.gen_test
+    def test_zcard_with_extant_set(self):
+        key, value1, value2, value3 = self.uuid4(4)
+        result = yield self.client.zadd(key, '1', value1, '2', value2,
+                                        '3', value3)
+        self.assertEqual(result, 3)
+        result = yield self.client.zcard(key)
+        self.assertEqual(result, 3)
+
+    @testing.gen_test
+    def test_zcard_with_nonextant_set(self):
+        key = self.uuid4()
+        result = yield self.client.zcard(key)
+        self.assertEqual(result, 0)
+
+    @testing.gen_test
     def test_zrangebyscore(self):
         key, value1, value2, value3 = self.uuid4(4)
         result = yield self.client.zadd(key, '1', value1, '2', value2,
@@ -134,3 +149,18 @@ class SortedSetTests(base.AsyncTestCase):
         self.assertEqual(result, 3)
         result = yield self.client.zremrangebyscore(key, '(1', 'inf')
         self.assertEqual(result, 2)
+
+    @testing.gen_test
+    def test_zscore_with_member_of_set(self):
+        key, value1, value2, value3 = self.uuid4(4)
+        result = yield self.client.zadd(key, '1', value1, '2', value2,
+                                        '3', value3)
+        self.assertEqual(result, 3)
+        result = yield self.client.zscore(key, value1)
+        self.assertEqual(result, b'1')
+
+    @testing.gen_test
+    def test_zscore_with_nonmember_of_set(self):
+        key, value1 = self.uuid4(2)
+        result = yield self.client.zscore(key, value1)
+        self.assertEqual(result, None)
