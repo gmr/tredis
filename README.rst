@@ -2,9 +2,9 @@ TRedis
 ======
 An asynchronous Redis client for Tornado
 
-|Version| |Downloads| |PythonVersions| |Status| |Coverage| |CodeClimate| |QuantifiedCode|
+|Version| |Status| |Coverage|
 
-Documentation is available at `tredis.readthedocs.org <http://tredis.readthedocs.org>`_.
+Documentation is available at `tredis.readthedocs.io <https://tredis.readthedocs.io>`_.
 
 Commands Implemented
 --------------------
@@ -79,23 +79,8 @@ Example
 .. |Version| image:: https://img.shields.io/pypi/v/tredis.svg?
    :target: https://pypi.python.org/pypi/tredis
 
-.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/tredis.svg?
-   :target: https://github.com/gmr/tredis
-
 .. |Status| image:: https://img.shields.io/travis/gmr/tredis.svg?
    :target: https://travis-ci.org/gmr/tredis
 
 .. |Coverage| image:: https://img.shields.io/codecov/c/github/gmr/tredis.svg?
    :target: https://codecov.io/github/gmr/tredis?branch=master
-
-.. |Downloads| image:: https://img.shields.io/pypi/dm/tredis.svg?
-   :target: https://pypi.python.org/pypi/tredis
-
-.. |CodeClimate| image:: https://codeclimate.com/github/gmr/tredis/badges/gpa.svg
-   :target: https://codeclimate.com/github/gmr/tredis
-   :alt: Code Climate
-
-.. |QuantifiedCode| image:: https://www.quantifiedcode.com/api/v1/project/cbf1bf1b78cd441ba6078cfada0a8a9a/badge.svg
-   :target: https://www.quantifiedcode.com/app/project/cbf1bf1b78cd441ba6078cfada0a8a9a
-   :alt: Code issues
-
