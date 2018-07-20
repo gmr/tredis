@@ -1,7 +1,7 @@
 Version History
 ===============
 
-- 0.8.0
+- 0.8.0 - released *2018-07-20*
 
   - Add `List <http://redis.io/commands#list>`_ commands (9 of 17) (#7 - dave-shawley)
   - Add :meth:`~tredis.Client.zcard` (#8 - ibnpaul)
