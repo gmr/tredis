@@ -1,4 +1,7 @@
+import datetime
 import sys
+
+import tredis
 
 sys.path.insert(0, '../')
 
@@ -10,9 +13,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 project = 'TRedis'
-copyright = '2015-2017, Gavin M. Roy'
+copyright = '2015-{}, Gavin M. Roy'.format(datetime.date.today().year)
 
-import tredis
 release = tredis.__version__
 version = '.'.join(release.split('.')[0:1])
 exclude_patterns = ['_build']
