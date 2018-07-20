@@ -1,9 +1,10 @@
 import datetime
 import sys
 
+sys.path.insert(0, '../')
+
 import tredis
 
-sys.path.insert(0, '../')
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode',
               'sphinx.ext.autosummary', 'sphinx.ext.intersphinx']
