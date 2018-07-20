@@ -29,7 +29,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Keys         | 22 of 22 |
 +--------------+----------+
-| Lists        | 0 of 17  |
+| Lists        | 9 of 17  |
 +--------------+----------+
 | Pub/Sub      | 0 of 6   |
 +--------------+----------+
