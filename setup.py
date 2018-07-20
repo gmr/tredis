@@ -17,7 +17,7 @@ classifiers = ['Development Status :: 5 - Production/Stable',
                'Topic :: Software Development :: Libraries',
                'Topic :: Database']
 
-requirements = ['tornado>4.0', 'hiredis>=0.2.0,<1']
+requirements = ['tornado>4.0,<5', 'hiredis>=0.2.0,<1']
 tests_require = ['nose', 'mock', 'codecov', 'coverage']
 
 setuptools.setup(name='tredis',

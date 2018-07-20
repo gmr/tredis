@@ -3,7 +3,10 @@ Version History
 
 - 0.8.0
 
-  - Add `List <http://redis.io/commands#list>`_ commands (9 of 17)
+  - Add `List <http://redis.io/commands#list>`_ commands (9 of 17) (#7 - dave-shawley)
+  - Add :meth:`~tredis.Client.zcard` (#8 - ibnpaul)
+  - Add :meth:`~tredis.Client.zscore` (#8 - ibnpaul)
+  - Documentation fixes (#6 - Zephor5)
 
 - 0.7.0 - released *2017-02-03*
 

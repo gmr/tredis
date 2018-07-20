@@ -39,7 +39,7 @@ the category mixins that are complete and submit a PR!
 +--------------+----------+
 | Sets         | 15 of 15 |
 +--------------+----------+
-| Sorted Sets  | 6 of 21  |
+| Sorted Sets  | 8 of 21  |
 +--------------+----------+
 | Strings      | 23 of 23 |
 +--------------+----------+
